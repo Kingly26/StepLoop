@@ -1,0 +1,13 @@
+# binari: si distribuiscono come Release, non nel repository
+*.exe
+*.pdb
+*.dll
+
+# vecchie versioni compilate (backup locali)
+versioni-precedenti/
+
+# file temporanei e di sistema
+*.bak
+*.tmp
+Thumbs.db
+desktop.ini
