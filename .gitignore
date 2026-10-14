@@ -1,12 +1,12 @@
-# binari: si distribuiscono come Release, non nel repository
+# binaries: distributed as GitHub Releases, not in the repository
 *.exe
 *.pdb
 *.dll
 
-# vecchie versioni compilate (backup locali)
-versioni-precedenti/
+# old compiled versions (local backups)
+previous-versions/
 
-# file temporanei e di sistema
+# temporary and system files
 *.bak
 *.tmp
 Thumbs.db

@@ -5,8 +5,8 @@ using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.IO;
 
-// Genera StepLoop.ico (16-256 px) e un'anteprima PNG.  Uso:  make-icon.exe <cartella-di-uscita>
-// Disegno: quadrato arrotondato blu con una freccia circolare (il ciclo) e un triangolo "play" al centro (il passo).
+// Generates StepLoop.ico (16-256 px) and a PNG preview.  Usage:  make-icon-drawn.exe <output-folder>
+// Design: blue rounded square with a circular arrow (the loop) and a "play" triangle in the center (the step).
 static class MakeIcon
 {
     static Bitmap Render(int s)
@@ -19,7 +19,7 @@ static class MakeIcon
             g.Clear(Color.Transparent);
             float S = s;
 
-            // sfondo: quadrato arrotondato con sfumatura blu
+            // background: rounded square with a blue gradient
             float m = Math.Max(0.5f, S * 0.02f);
             RectangleF r = new RectangleF(m, m, S - 2 * m, S - 2 * m);
             float rad = S * 0.23f;
@@ -27,7 +27,7 @@ static class MakeIcon
             using (LinearGradientBrush br = new LinearGradientBrush(r, Color.FromArgb(0x4C, 0x8D, 0xFF), Color.FromArgb(0x1E, 0x45, 0xB8), 90f))
             {
                 g.FillPath(br, bg);
-                // leggero riflesso in alto
+                // light highlight at the top
                 using (GraphicsPath hi = Round(new RectangleF(r.X, r.Y, r.Width, r.Height * 0.5f), rad))
                 using (LinearGradientBrush hb = new LinearGradientBrush(new RectangleF(r.X, r.Y, r.Width, r.Height * 0.5f),
                     Color.FromArgb(46, 255, 255, 255), Color.FromArgb(0, 255, 255, 255), 90f))
@@ -39,22 +39,22 @@ static class MakeIcon
                 }
             }
 
-            // freccia circolare (il ciclo)
+            // circular arrow (the loop)
             float cx = S / 2f, cy = S / 2f;
             float rr = S * 0.30f;
             float pw = Math.Max(1.6f, S * 0.105f);
-            float a0 = 28f, sweep = 292f;                       // gradi, in senso orario (y verso il basso)
+            float a0 = 28f, sweep = 292f;                       // degrees, clockwise (y points down)
             using (Pen p = new Pen(Color.White, pw))
             {
                 p.StartCap = LineCap.Round;
                 p.EndCap = LineCap.Flat;
                 g.DrawArc(p, cx - rr, cy - rr, rr * 2, rr * 2, a0, sweep - 8f);
             }
-            // punta della freccia nel punto finale, lungo la tangente
+            // arrow head at the end point, along the tangent
             double ea = (a0 + sweep) * Math.PI / 180.0;
             PointF end = new PointF(cx + rr * (float)Math.Cos(ea), cy + rr * (float)Math.Sin(ea));
-            PointF tan = new PointF(-(float)Math.Sin(ea), (float)Math.Cos(ea));         // direzione di marcia
-            PointF nor = new PointF((float)Math.Cos(ea), (float)Math.Sin(ea));           // verso l'esterno
+            PointF tan = new PointF(-(float)Math.Sin(ea), (float)Math.Cos(ea));         // direction of travel
+            PointF nor = new PointF((float)Math.Cos(ea), (float)Math.Sin(ea));           // outward
             float hl = Math.Max(3f, S * 0.20f), hw = Math.Max(2.6f, S * 0.17f);
             PointF apex = new PointF(end.X + tan.X * hl * 0.55f, end.Y + tan.Y * hl * 0.55f);
             PointF b1 = new PointF(end.X - tan.X * hl * 0.45f + nor.X * hw, end.Y - tan.Y * hl * 0.45f + nor.Y * hw);
@@ -62,7 +62,7 @@ static class MakeIcon
             using (SolidBrush wb = new SolidBrush(Color.White))
                 g.FillPolygon(wb, new PointF[] { apex, b1, b2 });
 
-            // triangolo "play" al centro
+            // "play" triangle in the center
             float ts = S * 0.17f;
             PointF[] tri = new PointF[]
             {
@@ -88,7 +88,7 @@ static class MakeIcon
         return p;
     }
 
-    // Immagine ICO in formato DIB 32 bit (con canale alfa) per le dimensioni piccole.
+    // ICO image as 32-bit DIB (with alpha channel) for the small sizes.
     static byte[] Dib(Bitmap b)
     {
         int w = b.Width, h = b.Height;
@@ -141,7 +141,7 @@ static class MakeIcon
             foreach (byte[] d in data) bw.Write(d);
         }
 
-        // anteprima: 256 grande + piccole su fondo scuro e chiaro
+        // preview: 256 large + small sizes on dark and light backgrounds
         using (Bitmap prev = new Bitmap(640, 300))
         using (Graphics g = Graphics.FromImage(prev))
         {
@@ -156,8 +156,8 @@ static class MakeIcon
                 x += s + 16;
             }
             using (Bitmap b2 = Render(128)) g.DrawImage(b2, 360, 130, 128, 128);
-            prev.Save(Path.Combine(dir, "anteprima.png"), ImageFormat.Png);
+            prev.Save(Path.Combine(dir, "preview.png"), ImageFormat.Png);
         }
-        Console.WriteLine("Creato " + Path.Combine(dir, "StepLoop.ico"));
+        Console.WriteLine("Created " + Path.Combine(dir, "StepLoop.ico"));
     }
 }

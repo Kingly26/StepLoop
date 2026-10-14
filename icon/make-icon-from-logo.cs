@@ -6,9 +6,9 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Runtime.InteropServices;
 
-// Crea StepLoop.ico (16-256 px) a partire da un'immagine del logo (PNG) su sfondo scuro uniforme.
-// Uso:  make-icon-da-logo.exe <logo.png> <cartella-di-uscita>
-// Il logo viene centrato in un riquadro arrotondato (stile app di Windows 11); alle dimensioni piccole occupa più spazio.
+// Creates StepLoop.ico (16-256 px) from a logo image (PNG) on a uniform dark background.
+// Usage:  make-icon-from-logo.exe <logo.png> <output-folder>
+// The logo is centered in a rounded square (Windows 11 style); at small sizes it takes up more of the tile.
 static class MakeIconFromLogo
 {
     static Color bg;
@@ -23,7 +23,7 @@ static class MakeIconFromLogo
         Marshal.Copy(d.Scan0, px, 0, px.Length);
         src.UnlockBits(d);
 
-        // colore di sfondo: media dei quattro angoli (24x24 px)
+        // background color: average of the four corners (24x24 px)
         long r = 0, g = 0, b = 0, n = 0;
         int[][] corners = { new int[] { 0, 0 }, new int[] { w - 24, 0 }, new int[] { 0, h - 24 }, new int[] { w - 24, h - 24 } };
         foreach (int[] c in corners)
@@ -35,7 +35,7 @@ static class MakeIconFromLogo
                 }
         bg = Color.FromArgb((int)(r / n), (int)(g / n), (int)(b / n));
 
-        // riquadro del logo: pixel che si discostano nettamente dallo sfondo
+        // logo bounding box: pixels that clearly differ from the background
         int x0 = w, y0 = h, x1 = -1, y1 = -1;
         for (int y = 0; y < h; y++)
             for (int x = 0; x < w; x++)
@@ -53,7 +53,7 @@ static class MakeIconFromLogo
 
     static Bitmap Render(int s)
     {
-        // quota del riquadro occupata dal logo: più grande quando l'icona è piccola
+        // share of the tile used by the logo: larger when the icon is small
         double occ = s <= 24 ? 0.90 : (s <= 48 ? 0.84 : 0.78);
         double side = Math.Max(logoBox.Width, logoBox.Height) / occ;
         double cx = logoBox.X + logoBox.Width / 2.0, cy = logoBox.Y + logoBox.Height / 2.0;
@@ -67,7 +67,7 @@ static class MakeIconFromLogo
                 g.InterpolationMode = InterpolationMode.HighQualityBicubic;
                 g.PixelOffsetMode = PixelOffsetMode.HighQuality;
                 g.CompositingQuality = CompositingQuality.HighQuality;
-                // parte del sorgente che cade nell'immagine (il resto resta sfondo)
+                // part of the source that falls inside the image (the rest stays background)
                 RectangleF inter = RectangleF.Intersect(from, new RectangleF(0, 0, src.Width, src.Height));
                 float k = s / from.Width;
                 RectangleF dst = new RectangleF((inter.X - from.X) * k, (inter.Y - from.Y) * k, inter.Width * k, inter.Height * k);
@@ -79,7 +79,7 @@ static class MakeIconFromLogo
                 }
             }
 
-            // maschera ad angoli arrotondati con bordi morbidi
+            // rounded-corner mask with soft edges
             Bitmap result = new Bitmap(s, s, PixelFormat.Format32bppArgb);
             using (Graphics g = Graphics.FromImage(result))
             {
@@ -138,7 +138,7 @@ static class MakeIconFromLogo
         Directory.CreateDirectory(dir);
         src = new Bitmap(logo);
         Analyze();
-        Console.WriteLine("Sfondo " + bg.R + "," + bg.G + "," + bg.B + "  logo " + logoBox);
+        Console.WriteLine("Background " + bg.R + "," + bg.G + "," + bg.B + "  logo " + logoBox);
 
         int[] sizes = { 16, 20, 24, 32, 40, 48, 64, 256 };
         List<byte[]> data = new List<byte[]>();
@@ -162,7 +162,7 @@ static class MakeIconFromLogo
             foreach (byte[] d in data) bw.Write(d);
         }
 
-        // anteprima: grande + piccole su fondo scuro e chiaro (come nella barra delle applicazioni / in Esplora risorse)
+        // preview: large + small sizes on dark and light backgrounds (like the taskbar / Explorer)
         using (Bitmap prev = new Bitmap(700, 320))
         using (Graphics g = Graphics.FromImage(prev))
         {
@@ -177,8 +177,8 @@ static class MakeIconFromLogo
                 x += s + 14;
             }
             using (Bitmap b2 = Render(128)) g.DrawImage(b2, 412, 150, 128, 128);
-            prev.Save(Path.Combine(dir, "anteprima.png"), ImageFormat.Png);
+            prev.Save(Path.Combine(dir, "preview.png"), ImageFormat.Png);
         }
-        Console.WriteLine("Creato " + Path.Combine(dir, "StepLoop.ico"));
+        Console.WriteLine("Created " + Path.Combine(dir, "StepLoop.ico"));
     }
 }

@@ -15,7 +15,7 @@ using System.Windows.Forms;
 using System.Xml;
 
 [assembly: System.Reflection.AssemblyTitle("StepLoop")]
-[assembly: System.Reflection.AssemblyVersion("6.0.0.0")]
+[assembly: System.Reflection.AssemblyVersion("6.0.1.0")]
 
 namespace StepLoop
 {

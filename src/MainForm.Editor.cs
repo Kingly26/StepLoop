@@ -491,20 +491,38 @@ namespace StepLoop
 
         void LayoutStack()
         {
-            if (inspBody == null) return;
-            inspBody.AutoScrollPosition = new Point(0, 0);
-            int x = S(14), y = S(14);
-            int w = Math.Max(S(120), inspBody.ClientSize.Width - S(28));
-            inspBody.SuspendLayout();
-            foreach (Control c in stack)
+            if (inspBody == null || layingOutStack) return;
+            layingOutStack = true;
+            try
             {
-                if (!c.Visible) continue;
-                c.SetBounds(x, y, w, c.Height);
-                y += c.Height + S(12);
+                inspBody.AutoScrollPosition = new Point(0, 0);
+                int x = S(14), y = S(14);
+
+                // The heights do not depend on the width, so whether the vertical scrollbar is needed can be decided up front.
+                // The width is computed from the panel width (not from ClientSize, which lags behind when the bar appears or
+                // disappears): this avoids a stale horizontal scrollbar and content that overflows without a vertical one.
+                int total = y;
+                foreach (Control c in stack)
+                    if (c.Visible) total += c.Height + S(12);
+                total += S(4);
+                bool needBar = total > inspBody.Height;
+                int clientW = inspBody.Width - (needBar ? SystemInformation.VerticalScrollBarWidth : 0);
+                int w = Math.Max(S(120), clientW - S(28));
+
+                inspBody.SuspendLayout();
+                foreach (Control c in stack)
+                {
+                    if (!c.Visible) continue;
+                    c.SetBounds(x, y, w, c.Height);
+                    y += c.Height + S(12);
+                }
+                inspBody.AutoScrollMinSize = new Size(0, needBar ? y + S(4) : 0);
+                inspBody.ResumeLayout(true);          // true: the scrollbars are recalculated now
             }
-            inspBody.AutoScrollMinSize = new Size(0, y + S(4));
-            inspBody.ResumeLayout(false);
+            finally { layingOutStack = false; }
         }
+
+        bool layingOutStack;
 
         void UpdateColorSwatch()
         {

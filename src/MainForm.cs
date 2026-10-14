@@ -106,7 +106,14 @@ namespace StepLoop
 
         static string ProfilesDir
         {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "profili"); }
+            get
+            {
+                // "profiles" next to the exe; an existing legacy "profili" folder is still used if there is no "profiles"
+                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                string current = Path.Combine(baseDir, "profiles");
+                string legacy = Path.Combine(baseDir, "profili");
+                return (!Directory.Exists(current) && Directory.Exists(legacy)) ? legacy : current;
+            }
         }
 
         bool MenuTab { get { return tabs.SelectedIndex == 1; } }
