@@ -18,6 +18,12 @@ and variables, with random durations and pauses. Dark/light UI, Italian/English,
 > *Anti-cheat systems can detect automated input. Using this app may lead to penalties or an account ban — use at your own risk and
 > respect the terms of service of the games and programs you use it with.* Progetto indipendente, non affiliato a Ubisoft né ad altri.
 
+## Scarica
+
+L'eseguibile pronto all'uso (`StepLoop.exe`, un solo file, nessuna installazione) è nella pagina
+**[Releases](https://github.com/Kingly26/StepLoop/releases/latest)**. Windows 10/11, .NET Framework 4.x (già incluso).
+L'exe non è firmato digitalmente: SmartScreen o l'antivirus possono chiedere conferma al primo avvio.
+
 ## Cosa fa
 
 Costruisci una **sequenza di passi** trascinando i blocchi dalla palette (o con doppio clic) e la fai girare con un tasto
@@ -71,4 +77,5 @@ build.bat   compilazione
 
 ## Licenza
 
-Nessuna licenza è ancora stata scelta: finché non ne viene aggiunta una, tutti i diritti sono riservati all'autore.
+[MIT](LICENSE) — puoi usare, modificare e ridistribuire il codice liberamente, mantenendo l'avviso di copyright.
+Il software è fornito "così com'è", senza garanzie.
