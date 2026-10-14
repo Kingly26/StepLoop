@@ -73,6 +73,14 @@ build.bat   build script
 - Always try profiles with **Simulation** before using them for real.
 - For very long sessions, lower the game's resolution and graphics quality and cap the FPS.
 
+## Contributing and support
+
+Bug reports, ideas and pull requests are welcome (English or Italian):
+[open an issue](https://github.com/Kingly26/StepLoop/issues/new/choose) ·
+[contributing guide](.github/CONTRIBUTING.md) ·
+[security policy](.github/SECURITY.md) ·
+[accessibility statement](.github/ACCESSIBILITY.md).
+
 ## License
 
 [MIT](LICENSE) — you may use, modify and redistribute the code freely, keeping the copyright notice.
@@ -150,6 +158,14 @@ build.bat   compilazione
 - Se il gioco gira come amministratore, avvia anche StepLoop come amministratore.
 - Prova sempre i profili con **Simulazione** prima di usarli davvero.
 - Per sessioni molto lunghe conviene ridurre risoluzione e qualità grafica del gioco e limitare gli FPS.
+
+## Contribuire e supporto
+
+Segnalazioni, idee e pull request sono benvenute (in italiano o in inglese):
+[apri una issue](https://github.com/Kingly26/StepLoop/issues/new/choose) ·
+[guida per contribuire](.github/CONTRIBUTING.md) ·
+[politica di sicurezza](.github/SECURITY.md) ·
+[dichiarazione di accessibilità](.github/ACCESSIBILITY.md).
 
 ## Licenza
 

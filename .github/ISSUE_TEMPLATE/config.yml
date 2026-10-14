@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security vulnerability (private)
+    url: https://github.com/Kingly26/StepLoop/security/advisories/new
+    about: Please report security problems privately, not as a public issue.
+  - name: Accessibility barrier
+    url: https://github.com/Kingly26/StepLoop/blob/main/.github/ACCESSIBILITY.md
+    about: Read the accessibility statement and how to report a barrier.

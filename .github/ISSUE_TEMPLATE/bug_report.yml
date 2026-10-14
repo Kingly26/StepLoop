@@ -1,0 +1,73 @@
+name: Bug report
+description: Something does not work as expected (English or Italian)
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. You can write in **English or Italian**.
+
+        **Please do not report security problems here**: use the *Security* tab ("Report a vulnerability").
+        Help with bypassing or hiding from anti-cheat systems, and questions about bans, are out of scope.
+  - type: input
+    id: version
+    attributes:
+      label: StepLoop version
+      description: The Release you downloaded (for example 6.0.1), or the File version in the exe's Properties → Details.
+      placeholder: "6.0.1"
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      placeholder: "Windows 11 23H2"
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Add a "Pick random" block…
+        2. …
+        3. …
+    validations:
+      required: true
+  - type: textarea
+    id: profile
+    attributes:
+      label: Profile or log (optional)
+      description: |
+        If the problem depends on a sequence, paste the profile `.json` (or the relevant part) and/or the log text.
+        Remove anything private first.
+      render: json
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where does it happen?
+      options:
+        - Editing the sequence (list, palette, inspector)
+        - Running a sequence (live panel, log)
+        - Recording (REC)
+        - Color picking / color conditions
+        - Saving or loading profiles
+        - Interface (theme, language, layout)
+        - Other
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before sending
+      options:
+        - label: I am using the latest release.
+        - label: I searched the existing issues and did not find the same problem.

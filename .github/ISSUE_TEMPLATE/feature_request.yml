@@ -1,0 +1,38 @@
+name: Feature request
+description: Suggest an idea or an improvement (English or Italian)
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea! You can write in **English or Italian**.
+        Requests that are about bypassing or hiding from anti-cheat systems are out of scope.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: Describe the situation or the problem, not only the solution.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like StepLoop to do?
+      description: How do you imagine it working? A sketch of the block or the options helps.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered
+      description: Anything you already tried with the current blocks (Repeat, If, Pick random, Variable, Together…).
+    validations:
+      required: false
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else
+      description: Screenshots, a sample profile (without private data), links.
+    validations:
+      required: false
