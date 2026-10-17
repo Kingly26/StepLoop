@@ -40,6 +40,8 @@ namespace StepLoop
         public int Tolerance;
         public bool Match;
         public int Sequence;         // aumenta a ogni controllo: l'interfaccia vede quando ne arriva uno nuovo
+        public int Clause;           // quale condizione del passo (0 = principale)
+        public int Count;            // quante condizioni ha il passo
     }
 
     public class MacroRunner
@@ -87,6 +89,7 @@ namespace StepLoop
         long lastCycleMs;
         int colorSeq;
         ColorCheck lastColor;
+        List<ColorCheck> lastChecks = new List<ColorCheck>();      // i controlli colore dell'ultima valutazione (una per condizione)
         volatile bool counting;
 
         public event Action Finished;
@@ -271,6 +274,9 @@ namespace StepLoop
 
         public ColorCheck LastColor { get { lock (statLock) { return lastColor; } } }
 
+        // Tutti i controlli colore dell'ultima valutazione di una condizione (con più condizioni in OR/AND sono più d'uno).
+        public ColorCheck[] LastChecks { get { lock (statLock) { return lastChecks.ToArray(); } } }
+
         void ResetList(int list)
         {
             lock (statLock)
@@ -408,16 +414,21 @@ namespace StepLoop
             }
         }
 
-        void NoteColor(int list, int idx, MacroStep s, Color expected, Color read, int delta, bool match)
+        // Pubblica i controlli colore di una valutazione (tutti insieme, per non far vedere all'interfaccia un elenco a metà).
+        void CommitChecks(int list, int idx, List<ColorCheck> checks)
         {
+            if (checks.Count == 0) return;
             lock (statLock)
             {
-                colorSeq++;
-                lastColor.Valid = true;
-                lastColor.List = list; lastColor.Index = idx;
-                lastColor.X = s.MoveX; lastColor.Y = s.MoveY; lastColor.W = s.Width; lastColor.H = s.Height;
-                lastColor.Expected = expected; lastColor.Read = read; lastColor.Delta = delta;
-                lastColor.Tolerance = s.Tolerance; lastColor.Match = match; lastColor.Sequence = colorSeq;
+                for (int i = 0; i < checks.Count; i++)
+                {
+                    colorSeq++;
+                    ColorCheck c = checks[i];
+                    c.Sequence = colorSeq; c.List = list; c.Index = idx; c.Valid = true; c.Count = checks.Count;
+                    checks[i] = c;
+                }
+                lastChecks = checks;
+                lastColor = checks[checks.Count - 1];
             }
         }
 
@@ -434,10 +445,139 @@ namespace StepLoop
 
         static string Hex(Color c) { return c.IsEmpty ? "?" : "#" + ScreenPixel.ToHex(c); }
 
-        void LogColor(MacroStep s, Color expected, Color read, int delta, bool match)
+        void LogColor(MacroStep s, CondClause c, Color expected, Color read, int delta, bool match, string prefix)
         {
-            Log(LogKind.Color, Tag(s) + Hex(expected) + " @ (" + s.MoveX + ", " + s.MoveY + ") " + L.T("→ letto ", "→ read ") + Hex(read)
+            Log(LogKind.Color, Tag(s) + prefix + Hex(expected) + " @ (" + c.MoveX + ", " + c.MoveY + ") " + L.T("→ letto ", "→ read ") + Hex(read)
                 + " · Δ " + delta + " · " + (match ? L.T("sì", "yes") : L.T("no", "no")));
+        }
+
+        // ---------- condizioni: una o più clausole (colore / variabile / caso) combinate in OR o in AND ----------
+
+        // Esito del controllo di una clausola.
+        sealed class ClauseResult
+        {
+            public CondClause C;
+            public bool Result;        // già con "NON è presente"
+            public bool Valid = true;  // false: colore non valido
+            public bool Present;       // colore: il colore è presente nell'area
+            public Color Target, Read;
+            public int Delta;
+            public int Roll;           // caso: numero estratto
+            public int VarValue;       // variabile: valore letto
+        }
+
+        // Controlla tutte le clausole del passo (la principale per prima) e le combina: OR = basta una, AND = tutte.
+        // Non scrive nel log: lo fanno i chiamanti, ognuno col proprio stile. Aggiorna il pannello live con i colori letti.
+        bool EvalClauses(int listId, int pc, MacroStep s, List<ClauseResult> results)
+        {
+            List<CondClause> all = s.AllClauses();
+            List<ColorCheck> checks = new List<ColorCheck>();
+            bool any = false, every = true;
+            for (int i = 0; i < all.Count; i++)
+            {
+                CondClause c = all[i];
+                ClauseResult r = new ClauseResult();
+                r.C = c;
+                if (c.Kind == CondClause.Variable)
+                {
+                    r.VarValue = GetVar((c.VarName ?? "").Trim());
+                    bool hit = Compare(r.VarValue, c.CmpOp, c.CmpValue);
+                    r.Result = c.Negate ? !hit : hit;
+                }
+                else if (c.Kind == CondClause.Chance)
+                {
+                    r.Roll = rng.Next(100);
+                    bool hit = r.Roll < c.ChancePct;
+                    r.Result = c.Negate ? !hit : hit;
+                }
+                else
+                {
+                    Color target;
+                    if (!ScreenPixel.TryParseHex(c.Input, out target)) { r.Valid = false; r.Result = false; }
+                    else
+                    {
+                        Color read;
+                        int delta;
+                        r.Present = ScreenPixel.Check(c.MoveX, c.MoveY, c.Width, c.Height, target, c.Tolerance, out read, out delta);
+                        r.Target = target; r.Read = read; r.Delta = delta;
+                        r.Result = c.Negate ? !r.Present : r.Present;
+                        ColorCheck cc = new ColorCheck();
+                        cc.X = c.MoveX; cc.Y = c.MoveY; cc.W = c.Width; cc.H = c.Height;
+                        cc.Expected = target; cc.Read = read; cc.Delta = delta; cc.Tolerance = c.Tolerance;
+                        cc.Match = r.Present; cc.Clause = i;
+                        checks.Add(cc);
+                    }
+                }
+                any |= r.Result;
+                every &= r.Result;
+                results.Add(r);
+            }
+            CommitChecks(listId, pc, checks);
+            return s.CondJoin == 1 ? every : any;
+        }
+
+        static string JoinName(MacroStep s) { return s.CondJoin == 1 ? "AND" : "OR"; }
+
+        static string Prefix(int i, int n) { return n > 1 ? "(" + (i + 1) + "/" + n + ") " : ""; }
+
+        static string Verdict(bool v) { return v ? L.T("vero", "true") : L.T("falso", "false"); }
+
+        // Log dello stile del "Se": una riga per condizione e, se sono più d'una, il risultato combinato.
+        void LogIf(MacroStep s, List<ClauseResult> rs, bool combined)
+        {
+            for (int i = 0; i < rs.Count; i++)
+            {
+                ClauseResult r = rs[i];
+                CondClause c = r.C;
+                string pre = Prefix(i, rs.Count);
+                if (c.Kind == CondClause.Variable)
+                {
+                    string vn = (c.VarName ?? "").Trim();
+                    Log(LogKind.Action, Tag(s) + pre + L.T("Se ", "If ") + vn + " (" + r.VarValue + ") " + StepStyle.CmpSymbol(c.CmpOp) + " " + c.CmpValue
+                        + ": " + Verdict(r.Result));
+                }
+                else if (c.Kind == CondClause.Chance)
+                {
+                    Log(LogKind.Action, Tag(s) + pre + L.T("Se a caso ", "If random ") + c.ChancePct + "%: " + L.T("estratto ", "rolled ") + r.Roll
+                        + " → " + Verdict(r.Result));
+                }
+                else if (!r.Valid)
+                {
+                    Log(LogKind.Warn, Tag(s) + pre + L.T("Colore della condizione non valido: '", "Invalid condition color: '") + c.Input + "'");
+                }
+                else
+                {
+                    Log(LogKind.Color, Tag(s) + pre + L.T("Se il colore ", "If the color ") + Hex(r.Target)
+                        + (c.Negate ? L.T(" NON è presente", " is NOT present") : L.T(" è presente", " is present"))
+                        + " @ (" + c.MoveX + ", " + c.MoveY + ") " + L.T("→ letto ", "→ read ") + Hex(r.Read) + " · Δ " + r.Delta
+                        + ": " + Verdict(r.Result));
+                }
+            }
+            if (rs.Count > 1)
+                Log(LogKind.Action, Tag(s) + L.T("Condizioni in ", "Conditions as ") + JoinName(s) + ": " + Verdict(combined));
+        }
+
+        // Log dei controlli di un'uscita da ciclo o di un'attesa (stile "colore letto").
+        void LogChecks(MacroStep s, List<ClauseResult> rs, bool combined)
+        {
+            for (int i = 0; i < rs.Count; i++)
+            {
+                ClauseResult r = rs[i];
+                CondClause c = r.C;
+                string pre = Prefix(i, rs.Count);
+                if (c.Kind == CondClause.Variable)
+                    Log(LogKind.Action, Tag(s) + pre + (string.IsNullOrEmpty(c.VarName) ? "?" : c.VarName) + " (" + r.VarValue + ") " + StepStyle.CmpSymbol(c.CmpOp) + " "
+                        + c.CmpValue + " · " + (r.Result ? L.T("sì", "yes") : L.T("no", "no")));
+                else if (c.Kind == CondClause.Chance)
+                    Log(LogKind.Action, Tag(s) + pre + L.T("a caso ", "random ") + c.ChancePct + "%: " + L.T("estratto ", "rolled ") + r.Roll + " · "
+                        + (r.Result ? L.T("sì", "yes") : L.T("no", "no")));
+                else if (!r.Valid)
+                    Log(LogKind.Warn, Tag(s) + pre + L.T("Colore non valido: '", "Invalid color: '") + c.Input + "'");
+                else
+                    LogColor(s, c, r.Target, r.Read, r.Delta, r.Present, pre);
+            }
+            if (rs.Count > 1)
+                Log(LogKind.Action, Tag(s) + L.T("Condizioni in ", "Conditions as ") + JoinName(s) + ": " + Verdict(combined));
         }
 
         // Attesa interrompibile da Stop e sospesa dalla pausa (il tempo restante si conserva).
@@ -643,6 +783,10 @@ namespace StepLoop
             phaseEnded = false;
             long lastCheck = t0 - 1000;
             lock (statLock) { cycleStart = t0; }
+            // colore di fine partita: quello principale + gli eventuali altri (stessa area), basta uno qualsiasi (OR)
+            List<Color> endColors = new List<Color>();
+            endColors.Add(endColor);
+            endColors.AddRange(ScreenPixel.ParseColorList(profile.EndExtra));
             phaseEndCheck = delegate
             {
                 // Il controllo dell'area costa: al massimo 4 volte al secondo, anche con cicli velocissimi.
@@ -656,13 +800,17 @@ namespace StepLoop
                 }
                 if (profile.EndPixelEnabled)
                 {
-                    Color read;
-                    int delta;
-                    bool hit = ScreenPixel.Check(profile.EndX, profile.EndY, profile.EndW, profile.EndH, endColor, profile.EndTolerance, out read, out delta);
-                    if (hit)
+                    for (int k = 0; k < endColors.Count; k++)
                     {
-                        Log(LogKind.Info, L.T("Fine partita: colore di fine rilevato", "End of match: end color detected"));
-                        return true;
+                        Color read;
+                        int delta;
+                        bool hit = ScreenPixel.Check(profile.EndX, profile.EndY, profile.EndW, profile.EndH, endColors[k], profile.EndTolerance, out read, out delta);
+                        if (hit)
+                        {
+                            Log(LogKind.Info, L.T("Fine partita: colore di fine rilevato", "End of match: end color detected")
+                                + (endColors.Count > 1 ? " (" + Hex(endColors[k]) + ")" : ""));
+                            return true;
+                        }
                     }
                 }
                 return false;
@@ -717,14 +865,11 @@ namespace StepLoop
             return items[items.Count - 1];
         }
 
-        bool ExitConditionMet(int listId, int pc, MacroStep s, Color color)
+        bool ExitConditionMet(int listId, int pc, MacroStep s)
         {
-            Color read;
-            int delta;
-            bool present = ScreenPixel.Check(s.MoveX, s.MoveY, s.Width, s.Height, color, s.Tolerance, out read, out delta);
-            bool result = s.Negate ? !present : present;
-            NoteColor(listId, pc, s, color, read, delta, present);
-            LogColor(s, color, read, delta, present);
+            List<ClauseResult> rs = new List<ClauseResult>();
+            bool result = EvalClauses(listId, pc, s, rs);
+            LogChecks(s, rs, result);
             return result;
         }
 
@@ -753,16 +898,26 @@ namespace StepLoop
                             LoopBegin(listId, pc, max, s.DurationMs);
                             Log(LogKind.Loop, Tag(s) + StepStyle.LoopLog(s));
 
+                            // la condizione di uscita: il colore principale (+ le condizioni aggiuntive, in OR o in AND)
                             Color untilColor = Color.Empty;
-                            bool useUntil = s.UseUntil && ScreenPixel.TryParseHex(s.Input, out untilColor);
-                            if (s.UseUntil && !useUntil)
-                                Log(LogKind.Warn, Tag(s) + L.T("Colore di uscita non valido: il ciclo non ha una condizione di uscita.",
-                                                 "Invalid exit color: the loop has no exit condition."));
+                            bool useUntil = s.UseUntil;
+                            if (useUntil && !ScreenPixel.TryParseHex(s.Input, out untilColor))
+                            {
+                                if (s.ExtraCount == 0)
+                                {
+                                    useUntil = false;
+                                    Log(LogKind.Warn, Tag(s) + L.T("Colore di uscita non valido: il ciclo non ha una condizione di uscita.",
+                                                     "Invalid exit color: the loop has no exit condition."));
+                                }
+                                else
+                                    Log(LogKind.Warn, Tag(s) + L.T("Colore di uscita principale non valido: conta come condizione falsa.",
+                                                     "Invalid main exit color: it counts as a false condition."));
+                            }
                             long t0 = Now;
                             string reason = "";
 
                             bool skip = false;
-                            if (useUntil && s.CheckFirst && ExitConditionMet(listId, pc, s, untilColor))
+                            if (useUntil && s.CheckFirst && ExitConditionMet(listId, pc, s))
                             {
                                 Log(LogKind.Loop, Tag(s) + L.T("Condizione di uscita già soddisfatta: salto il ciclo", "Exit condition already met: skipping the loop"));
                                 reason = L.T("saltato", "skipped");
@@ -783,7 +938,7 @@ namespace StepLoop
                                 if (gotoTarget >= 0) { reason = "goto"; break; }
                                 if (breakFlag) { breakFlag = false; reason = L.T("esci", "exit"); break; }
                                 if (Stopped || phaseEnded) break;
-                                if (useUntil && ExitConditionMet(listId, pc, s, untilColor))
+                                if (useUntil && ExitConditionMet(listId, pc, s))
                                 {
                                     Log(LogKind.Loop, Tag(s) + L.T("Condizione di uscita soddisfatta dopo " + (i + 1) + " giri: esco",
                                                      "Exit condition met after " + (i + 1) + " rounds: leaving"));
@@ -935,42 +1090,12 @@ namespace StepLoop
             }
         }
 
+        // Condizione di un "Se": una o più clausole (colore / variabile / caso) in OR o in AND.
         bool EvalCondition(int listId, int pc, MacroStep s)
         {
-            if (s.CondKind == 1)
-            {
-                string vn = (s.VarName ?? "").Trim();
-                int v = GetVar(vn);
-                bool hit = Compare(v, s.CmpOp, s.CmpValue);
-                bool res = s.Negate ? !hit : hit;
-                Log(LogKind.Action, Tag(s) + L.T("Se ", "If ") + vn + " (" + v + ") " + StepStyle.CmpSymbol(s.CmpOp) + " " + s.CmpValue
-                    + ": " + (res ? L.T("vero", "true") : L.T("falso", "false")));
-                return res;
-            }
-            if (s.CondKind == 2)
-            {
-                int roll = rng.Next(100);
-                bool hit = roll < s.ChancePct;
-                bool res = s.Negate ? !hit : hit;
-                Log(LogKind.Action, Tag(s) + L.T("Se a caso ", "If random ") + s.ChancePct + "%: " + L.T("estratto ", "rolled ") + roll
-                    + " → " + (res ? L.T("vero", "true") : L.T("falso", "false")));
-                return res;
-            }
-            Color target;
-            if (!ScreenPixel.TryParseHex(s.Input, out target))
-            {
-                Log(LogKind.Warn, Tag(s) + L.T("Colore della condizione non valido: '", "Invalid condition color: '") + s.Input + "'");
-                return false;
-            }
-            Color read;
-            int delta;
-            bool present = ScreenPixel.Check(s.MoveX, s.MoveY, s.Width, s.Height, target, s.Tolerance, out read, out delta);
-            bool result = s.Negate ? !present : present;
-            NoteColor(listId, pc, s, target, read, delta, present);
-            Log(LogKind.Color, Tag(s) + L.T("Se il colore ", "If the color ") + Hex(target)
-                + (s.Negate ? L.T(" NON è presente", " is NOT present") : L.T(" è presente", " is present"))
-                + " @ (" + s.MoveX + ", " + s.MoveY + ") " + L.T("→ letto ", "→ read ") + Hex(read) + " · Δ " + delta
-                + ": " + (result ? L.T("vero", "true") : L.T("falso", "false")));
+            List<ClauseResult> rs = new List<ClauseResult>();
+            bool result = EvalClauses(listId, pc, s, rs);
+            LogIf(s, rs, result);
             return result;
         }
 
@@ -1243,6 +1368,8 @@ namespace StepLoop
             }
         }
 
+        // "Attendi colore" / "Attendi che sparisca": aspetta che la condizione (il colore principale + le eventuali condizioni
+        // aggiuntive, in OR o in AND) diventi vera (compare) o falsa (sparisce), fino al timeout del passo.
         void WaitForPixel(int listId, int pc, MacroStep s, bool wantMatch)
         {
             Color target;
@@ -1254,26 +1381,30 @@ namespace StepLoop
             string where = (s.Width > 1 || s.Height > 1)
                 ? L.T("area (", "area (") + s.MoveX + ", " + s.MoveY + ") " + s.Width + "x" + s.Height
                 : L.T("punto (", "point (") + s.MoveX + ", " + s.MoveY + ")";
-            Log(LogKind.Action, Tag(s) + L.T("Attendo che il colore #" + s.Input.ToUpperInvariant() + " su " + where + (wantMatch ? " compaia" : " sparisca")
+            int extra = s.ExtraCount;
+            string more = extra > 0
+                ? L.T(" (+" + extra + (extra == 1 ? " condizione" : " condizioni") + " in " + JoinName(s) + ")",
+                      " (+" + extra + (extra == 1 ? " condition" : " conditions") + " as " + JoinName(s) + ")")
+                : "";
+            Log(LogKind.Action, Tag(s) + L.T("Attendo che il colore #" + s.Input.ToUpperInvariant() + " su " + where + (wantMatch ? " compaia" : " sparisca") + more
                     + " (max " + StepStyle.Fmt(s.DurationMs) + ")",
-                "Waiting for the color #" + s.Input.ToUpperInvariant() + " on " + where + (wantMatch ? " to appear" : " to disappear")
+                "Waiting for the color #" + s.Input.ToUpperInvariant() + " on " + where + (wantMatch ? " to appear" : " to disappear") + more
                     + " (max " + StepStyle.Fmt(s.DurationMs) + ")"));
             long t0 = Now;
             bool ok = false;
-            Color read = Color.Empty;
-            int delta = 255;
-            bool lastPresent = false;
+            bool combined = false;
+            List<ClauseResult> last = new List<ClauseResult>();
             while (!Stopped)
             {
-                lastPresent = ScreenPixel.Check(s.MoveX, s.MoveY, s.Width, s.Height, target, s.Tolerance, out read, out delta);
-                NoteColor(listId, pc, s, target, read, delta, lastPresent);
-                if (lastPresent == wantMatch) { ok = true; break; }
+                last = new List<ClauseResult>();
+                combined = EvalClauses(listId, pc, s, last);
+                if (combined == wantMatch) { ok = true; break; }
                 if (Now - t0 >= s.DurationMs) break;
                 Sleep(200);
             }
             if (!Stopped)
             {
-                LogColor(s, target, read, delta, lastPresent);
+                LogChecks(s, last, combined);
                 Log(ok ? LogKind.Info : LogKind.Warn, Tag(s)
                     + (ok ? L.T("Condizione soddisfatta dopo " + (Now - t0) + " ms", "Condition met after " + (Now - t0) + " ms")
                           : L.T("Timeout: continuo comunque", "Timeout: continuing anyway")));

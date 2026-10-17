@@ -95,7 +95,8 @@ namespace StepLoop
         // opzioni della scheda "Riavvio partita"
         CheckField chkAuto, chkMenuFirst, chkEndPixel;
         NumBox nudGameSec, nudEndX, nudEndY, nudEndW, nudEndH, nudEndTol;
-        TextField tfEndColor;
+        TextField tfEndColor, tfEndExtra;
+        UiLabel lblEndExtra;
         SwatchBox swEnd;
         UiLabel lblGameSec;
 
@@ -569,7 +570,7 @@ namespace StepLoop
 
             menuOpts = new Surface(Surface.Kind.Panel);
             menuOpts.Dock = DockStyle.Top;
-            menuOpts.Height = S(124);
+            menuOpts.Height = S(162);
             menuOpts.BottomLine = true;
             menuOpts.Visible = false;
             listCard.Controls.Add(menuOpts);
@@ -675,6 +676,30 @@ namespace StepLoop
             menuOpts.Controls.Add(btnEndPick);
             Tip(btnEndPick, "Porta il gioco nello stato giusto e premi F9: lo schermo si congela e trascini per scegliere l'area.",
                             "Bring the game to the right state and press F9: the screen freezes and you drag to choose the area.");
+
+            // altri colori che segnano la fine (stessa area e tolleranza): basta uno qualsiasi
+            int y2 = S(120);
+            lblEndExtra = new UiLabel();
+            Loc(lblEndExtra, "Altri colori di fine (stessa area), in OR:", "Other end colors (same area), as OR:");
+            lblEndExtra.SetBounds(S(14), y2, S(290), S(30));
+            menuOpts.Controls.Add(lblEndExtra);
+            tfEndExtra = new TextField();
+            tfEndExtra.Mono = true;
+            tfEndExtra.SetBounds(S(308), y2, S(400), S(30));
+            menuOpts.Controls.Add(tfEndExtra);
+            tfEndExtra.TextChanged += delegate { ValidateEndExtra(); };
+            Tip(tfEndExtra, "Facoltativo: altri colori (RRGGBB separati da virgola) che segnano la fine della partita nella stessa area e con la stessa tolleranza. Basta che uno qualsiasi (compreso quello principale) sia presente. Esempio: 1FA84A, E03C3C",
+                            "Optional: other colors (RRGGBB separated by commas) that mark the end of the match in the same area and with the same tolerance. It is enough that any one of them (the main one included) is present. Example: 1FA84A, E03C3C");
+        }
+
+        // i colori non validi nell'elenco si colorano di rosso (e vengono ignorati)
+        void ValidateEndExtra()
+        {
+            string t = tfEndExtra.Text ?? "";
+            int tokens = t.Split(new char[] { ',', ';', ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
+            bool ok = ScreenPixel.ParseColorList(t).Count == tokens;
+            tfEndExtra.TextColorOverride = ok ? Color.Empty : Color.FromArgb(225, 70, 70);
+            tfEndExtra.ApplyTheme();
         }
 
         void UpdateEndSwatch()
@@ -805,6 +830,7 @@ namespace StepLoop
             ThemeApplier.Apply(this);
             UpdateEndSwatch();
             ValidatePool();
+            ValidateEndExtra();
             btnRec.IconColor = Pal.Dot(Sem.Exit);
             btnHint.IconColor = Pal.Warn;
             UpdateRunTexts();

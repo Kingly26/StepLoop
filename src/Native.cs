@@ -312,6 +312,27 @@ namespace StepLoop
             color = Color.FromArgb((v >> 16) & 0xFF, (v >> 8) & 0xFF, v & 0xFF);
             return true;
         }
+
+        // Elenco di colori "RRGGBB, RRGGBB" (separati da virgola, punto e virgola o spazio): tiene solo quelli validi, in forma
+        // normalizzata (maiuscolo, senza #). Ritorna null se non ce n'è nessuno.
+        public static string NormalizeColorList(string text)
+        {
+            List<string> keep = new List<string>();
+            foreach (Color c in ParseColorList(text)) keep.Add(ToHex(c));
+            return keep.Count == 0 ? null : string.Join(", ", keep.ToArray());
+        }
+
+        public static List<Color> ParseColorList(string text)
+        {
+            List<Color> res = new List<Color>();
+            if (string.IsNullOrEmpty(text)) return res;
+            foreach (string part in text.Split(new char[] { ',', ';', ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                Color c;
+                if (TryParseHex(part, out c)) res.Add(c);
+            }
+            return res;
+        }
     }
 
     public static class KeyParser

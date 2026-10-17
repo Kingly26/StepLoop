@@ -35,6 +35,7 @@ namespace StepLoop
             Color c;
             p.EndColor = ScreenPixel.TryParseHex(tfEndColor.Text, out c) ? ScreenPixel.ToHex(c) : "000000";
             p.EndTolerance = nudEndTol.Value;
+            p.EndExtra = ScreenPixel.NormalizeColorList(tfEndExtra.Text);
             return p;
         }
 
@@ -69,6 +70,7 @@ namespace StepLoop
                 nudEndH.Value = p.EndH;
                 tfEndColor.Text = p.EndColor;
                 nudEndTol.Value = p.EndTolerance;
+                tfEndExtra.Text = p.EndExtra ?? "";
             }
             finally { rebuilding = false; }
             EnsureDistinctKeys(true);

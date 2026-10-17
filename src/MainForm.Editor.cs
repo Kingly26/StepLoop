@@ -68,6 +68,26 @@ namespace StepLoop
         ComboPart[] editParts;          // copia di lavoro delle 4 parti dell'"Insieme" selezionato
         int partShown = -1;             // parte i cui valori sono ora nei campi
 
+        // condizioni multiple (OR / AND) di Se, Ripeti fino a, Attendi colore
+        Segmented segCondSel, segCondJoin;
+        FieldBox fbCondSel, fbCondJoin;
+        FlatButton btnCondRemove;
+        List<CondClause> editConds;     // copia di lavoro: [0] = condizione principale, poi le aggiuntive
+        int condShown = -1;             // condizione i cui valori sono ora nei campi
+
+        string[] CondSelItems(int count)
+        {
+            List<string> items = new List<string>();
+            for (int i = 1; i <= count; i++) items.Add(i.ToString());
+            if (count < CondClause.MaxClauses) items.Add("+");
+            return items.ToArray();
+        }
+
+        string[] CondJoinItems()
+        {
+            return new string[] { L.T("Basta una (OR)", "Any one (OR)"), L.T("Tutte (AND)", "All of them (AND)") };
+        }
+
         string[] CondKindItems()
         {
             return new string[] { L.T("Colore a schermo", "Screen color"), L.T("Variabile", "Variable"), L.T("Probabilità", "Chance") };
@@ -191,7 +211,7 @@ namespace StepLoop
             cbCond = new DarkCombo();
             cbCond.SetItems(new string[] { L.T("il colore è presente", "the color is present"), L.T("il colore NON è presente", "the color is NOT present") });
             cbCond.SelectedIndex = 0;
-            fbCond = MakeField(cbCond, "Condizione", "Condition", false);
+            fbCond = MakeField(cbCond, "Questa condizione è vera quando…", "This condition is true when…", false);
 
             nudX = MakeNum(-20000, 20000, 0, true);
             nudY = MakeNum(-20000, 20000, 0, true);
@@ -374,11 +394,34 @@ namespace StepLoop
             Tip(nudPartChance, "Ad ogni esecuzione l'azione parte solo con questa probabilità (100 = sempre).",
                                "Each time the action only starts with this probability (100 = always).");
 
+            // ---- più condizioni in OR / AND (Se, Ripeti fino a, Attendi colore) ----
+            segCondSel = new Segmented();
+            segCondSel.Items = CondSelItems(1);
+            fbCondSel = MakeField(segCondSel, "Condizioni", "Conditions", false);
+            Tip(segCondSel, "La 1 è la condizione principale. Con «+» aggiungi altre condizioni (un altro colore, una variabile o il caso), fino a 4: ogni numero modifica la sua.",
+                            "No. 1 is the main condition. With «+» you add more conditions (another color, a variable or chance), up to 4: each number edits its own.");
+            segCondSel.SelectedIndexChanged += delegate { OnCondSwitched(); };
+
+            segCondJoin = new Segmented();
+            segCondJoin.Items = CondJoinItems();
+            fbCondJoin = MakeField(segCondJoin, "La condizione è vera quando…", "The condition is true when…", false);
+            Tip(segCondJoin, "OR: basta che una qualsiasi delle condizioni sia vera (es. esci se compare il colore A oppure il colore B). AND: devono esserlo tutte.",
+                             "OR: it is enough that any one of the conditions is true (e.g. exit if color A or color B appears). AND: all of them must be.");
+            segCondJoin.SelectedIndexChanged += delegate { OnEditorChanged(); };
+
+            btnCondRemove = new FlatButton();
+            btnCondRemove.Icon = Glyph.Trash;
+            btnCondRemove.Style = FlatButton.Look.DangerSoft;
+            btnCondRemove.Height = S(32);
+            Loc(btnCondRemove, "Rimuovi questa condizione", "Remove this condition");
+            btnCondRemove.Click += delegate { RemoveCond(); };
+
             stack.AddRange(new Control[]
             {
-                fbName, fbCondKind, fbVarName, fbCmp, fbChance, fbVarOp, rowSetVals, fbAltWeight,
+                fbName, rowLimits, chkUntil, fbCondSel, fbCondJoin, btnCondRemove,
+                fbCondKind, fbVarName, fbCmp, fbChance, fbVarOp, rowSetVals, fbAltWeight,
                 fbPart, chkPartOn, fbPartChance,
-                fbKeys, fbPool, fbPreset, fbGoto, fbButton, rowLimits, chkUntil, fbCond, rowArea, chkRandMove, fbColor, rowPickBtns, chipTest,
+                fbKeys, fbPool, fbPreset, fbGoto, fbButton, fbCond, rowArea, chkRandMove, fbColor, rowPickBtns, chipTest,
                 fbPreview, chkCheckFirst, fbDur, chkRandDur, fbDurRange, fbDurLong, fbPause, chkRandPause, fbPauseRange, fbPauseLong,
                 fbPickCount, fbJit, fbPosJit, fbWeight
             });
@@ -701,6 +744,139 @@ namespace StepLoop
             UpdateEditorVisibility();
         }
 
+        // ---------- più condizioni (OR / AND) ----------
+
+        // campi -> condizione i della copia di lavoro. Un colore non valido non sovrascrive l'ultimo valido.
+        void StoreCondFields(int i)
+        {
+            if (editConds == null || i < 0 || i >= editConds.Count) return;
+            CondClause c = editConds[i];
+            bool isWait = editType == StepType.WaitPixel || editType == StepType.WaitPixelGone;
+            c.Kind = (editType == StepType.IfStart || i > 0) ? Math.Max(0, cbCondKind.SelectedIndex) : CondClause.Color;
+            if (c.Kind == CondClause.Variable)
+            {
+                c.VarName = tfVarName.Text.Trim();
+                c.CmpOp = Math.Max(0, cbCmp.SelectedIndex);
+                c.CmpValue = nudIfVal.Value;
+                c.Negate = false;
+            }
+            else if (c.Kind == CondClause.Chance)
+            {
+                c.ChancePct = nudChance.Value;
+                c.Negate = false;
+            }
+            else
+            {
+                Color col;
+                if (ScreenPixel.TryParseHex(tfColor.Text, out col)) c.Input = ScreenPixel.ToHex(col);
+                c.MoveX = nudX.Value;
+                c.MoveY = nudY.Value;
+                c.Width = nudW.Value;
+                c.Height = nudH.Value;
+                c.Tolerance = nudTol.Value;
+                c.Negate = cbCond.SelectedIndex == 1 && !(isWait && i == 0);
+            }
+        }
+
+        // condizione i della copia di lavoro -> campi (senza scatenare la modifica del passo)
+        void LoadCondFields(int i)
+        {
+            if (editConds == null || i < 0 || i >= editConds.Count) return;
+            CondClause c = editConds[i];
+            bool old = rebuilding;
+            rebuilding = true;
+            try
+            {
+                cbCondKind.SelectedIndex = Math.Min(2, Math.Max(0, c.Kind));
+                Color col;
+                tfColor.Text = ScreenPixel.TryParseHex(c.Input, out col) ? ScreenPixel.ToHex(col) : "FFFFFF";
+                nudX.Value = c.MoveX;
+                nudY.Value = c.MoveY;
+                nudW.Value = c.Width;
+                nudH.Value = c.Height;
+                nudTol.Value = c.Tolerance;
+                cbCond.SelectedIndex = c.Negate ? 1 : 0;
+                tfVarName.Text = string.IsNullOrEmpty(c.VarName) ? DefaultVarName() : c.VarName;
+                cbCmp.SelectedIndex = Math.Min(5, Math.Max(0, c.CmpOp));
+                nudIfVal.Value = c.CmpValue;
+                nudChance.Value = c.ChancePct;
+            }
+            finally { rebuilding = old; }
+            UpdateColorSwatch();
+        }
+
+        // aggiorna le voci del selettore (1, 2, 3, +) e seleziona la condizione indicata, senza scatenare eventi
+        void RefreshCondSel(int selected)
+        {
+            bool old = rebuilding;
+            rebuilding = true;
+            try
+            {
+                segCondSel.Items = CondSelItems(editConds == null ? 1 : editConds.Count);
+                segCondSel.SelectedIndex = selected;
+                segCondSel.Invalidate();
+            }
+            finally { rebuilding = old; }
+        }
+
+        bool EditingCondition()
+        {
+            return editIndex >= 0 && editConds != null
+                && (editType == StepType.IfStart || editType == StepType.WaitPixel || editType == StepType.WaitPixelGone
+                    || (editType == StepType.LoopStart && chkUntil.Checked));
+        }
+
+        void OnCondSwitched()
+        {
+            if (rebuilding || !EditingCondition()) return;
+            int sel = segCondSel.SelectedIndex;
+            StoreCondFields(condShown);
+            if (sel >= editConds.Count)
+            {
+                // «+»: nuova condizione. Parte come copia della principale (stessa area, stessa tolleranza) per cambiare solo il colore.
+                if (editConds.Count >= CondClause.MaxClauses) { RefreshCondSel(condShown); return; }
+                CondClause nc = editConds[0].Kind == CondClause.Color ? editConds[0].Clone() : new CondClause();
+                editConds.Add(nc);
+                sel = editConds.Count - 1;
+            }
+            condShown = sel;
+            RefreshCondSel(sel);
+            LoadCondFields(sel);
+            UpdateEditorVisibility();
+            OnEditorChanged();
+        }
+
+        void RemoveCond()
+        {
+            if (!EditingCondition() || condShown <= 0 || condShown >= editConds.Count) return;
+            editConds.RemoveAt(condShown);
+            condShown = Math.Min(condShown, editConds.Count - 1);
+            RefreshCondSel(condShown);
+            LoadCondFields(condShown);
+            UpdateEditorVisibility();
+            OnEditorChanged();
+        }
+
+        // Scrive nel passo la condizione principale (campi del passo) e quelle aggiuntive (Extra). false = colore non valido.
+        bool ApplyConds(MacroStep s)
+        {
+            if (editConds == null || condShown < 0 || condShown >= editConds.Count) return false;
+            int kind = (s.Type == StepType.IfStart || condShown > 0) ? cbCondKind.SelectedIndex : CondClause.Color;
+            Color probe;
+            if (kind == CondClause.Color && !ScreenPixel.TryParseHex(tfColor.Text, out probe)) return false;
+            StoreCondFields(condShown);
+            s.ApplyPrimary(editConds[0]);
+            int n = editConds.Count - 1;
+            if (n > 0)
+            {
+                s.Extra = new CondClause[n];
+                for (int i = 0; i < n; i++) s.Extra[i] = editConds[i + 1].Clone();
+            }
+            else s.Extra = null;
+            s.CondJoin = segCondJoin.SelectedIndex == 1 ? 1 : 0;
+            return true;
+        }
+
         // ---------- visibilità dei campi ----------
 
         static void Vis(Control c, bool v) { if (c.Visible != v) c.Visible = v; }
@@ -709,9 +885,13 @@ namespace StepLoop
         {
             bool none = editIndex < 0;
             StepType t = editType;
-            int ifKind = (!none && t == StepType.IfStart) ? cbCondKind.SelectedIndex : 0;
+            bool isWait = !none && (t == StepType.WaitPixel || t == StepType.WaitPixelGone);
             bool until = !none && t == StepType.LoopStart && chkUntil.Checked;
-            bool pixel = !none && (t == StepType.WaitPixel || t == StepType.WaitPixelGone || (t == StepType.IfStart && ifKind == 0) || until);
+            // la condizione mostrata (principale o aggiuntiva) e il suo tipo: 0 colore, 1 variabile, 2 caso
+            bool hasCond = !none && editConds != null && (t == StepType.IfStart || until || isWait);
+            int cshown = hasCond ? Math.Max(0, condShown) : 0;
+            int ifKind = hasCond ? ((t == StepType.IfStart || cshown > 0) ? cbCondKind.SelectedIndex : 0) : 0;
+            bool pixel = hasCond && ifKind == 0;
             bool absolute = pixel || (!none && (t == StepType.ClickAt || t == StepType.MoveTo));
             bool combo = !none && t == StepType.Combo;
             int part = combo ? segPart.SelectedIndex : -1;
@@ -730,10 +910,13 @@ namespace StepLoop
 
             inspBody.SuspendLayout();
             Vis(fbName, !none && t != StepType.LoopEnd && t != StepType.IfEnd && t != StepType.Else && t != StepType.Option && t != StepType.ChoiceEnd);
-            Vis(fbCondKind, !none && t == StepType.IfStart);
-            Vis(fbVarName, !none && (t == StepType.SetVar || (t == StepType.IfStart && ifKind == 1)));
-            Vis(fbCmp, !none && t == StepType.IfStart && ifKind == 1);
-            Vis(fbChance, !none && t == StepType.IfStart && ifKind == 2);
+            Vis(fbCondSel, hasCond);
+            Vis(fbCondJoin, hasCond && editConds.Count >= 2);
+            Vis(btnCondRemove, hasCond && cshown > 0);
+            Vis(fbCondKind, hasCond && (t == StepType.IfStart || cshown > 0));
+            Vis(fbVarName, (!none && t == StepType.SetVar) || (hasCond && ifKind == 1));
+            Vis(fbCmp, hasCond && ifKind == 1);
+            Vis(fbChance, hasCond && ifKind == 2);
             Vis(fbVarOp, !none && t == StepType.SetVar);
             Vis(rowSetVals, !none && t == StepType.SetVar);
             Vis(fbSetVal2, !none && t == StepType.SetVar && cbVarOp.SelectedIndex == 3);
@@ -749,7 +932,8 @@ namespace StepLoop
             Vis(fbButton, (!none && (t == StepType.Click || t == StepType.ClickAt)) || (combo && (part == ComboPart.Click || part == ComboPart.Aim)));
             Vis(rowLimits, !none && t == StepType.LoopStart);
             Vis(chkUntil, !none && t == StepType.LoopStart);
-            Vis(fbCond, !none && ((t == StepType.IfStart && ifKind == 0) || until));
+            // "presente / NON presente": per l'attesa vale solo sulle condizioni aggiuntive (la principale è "compare" / "sparisce")
+            Vis(fbCond, hasCond && ifKind == 0 && !(isWait && cshown == 0));
             Vis(rowArea, absolute || mouseFields);
             Vis(fbW, pixel);
             Vis(fbH, pixel);
@@ -782,6 +966,12 @@ namespace StepLoop
             fbWeight.Caption = (!none && t == StepType.Option) ? L.T("Peso dell'alternativa", "Alternative weight")
                 : (choiceChild ? L.T("Peso nella scelta", "Weight in the pick") : L.T("Peso (random)", "Weight (random)"));
             fbVarName.Caption = L.T("Nome variabile", "Variable name");
+            fbCondKind.Caption = t == StepType.IfStart ? L.T("Il Se controlla", "The If checks") : L.T("Questa condizione controlla", "This condition checks");
+            fbCondSel.Caption = (hasCond && editConds.Count > 1)
+                ? L.T("Condizioni · stai modificando la n. ", "Conditions · editing no. ") + (cshown + 1)
+                : L.T("Condizioni (aggiungine altre con «+»)", "Conditions (add more with «+»)");
+            fbCondJoin.Caption = L.T("La condizione è vera quando…", "The condition is true when…");
+            segCondJoin.Items = CondJoinItems();
             if (combo)
             {
                 fbButton.Caption = part == ComboPart.Aim ? L.T("Pulsante di mira (tenuto premuto)", "Aim button (held down)")
@@ -860,36 +1050,9 @@ namespace StepLoop
                 case StepType.WaitPixel:
                 case StepType.WaitPixelGone:
                 case StepType.IfStart:
-                    {
-                        if (s.Type == StepType.IfStart)
-                        {
-                            s.CondKind = Math.Max(0, cbCondKind.SelectedIndex);
-                            if (s.CondKind == 1)
-                            {
-                                s.VarName = tfVarName.Text.Trim();
-                                s.CmpOp = Math.Max(0, cbCmp.SelectedIndex);
-                                s.CmpValue = nudIfVal.Value;
-                                s.Negate = false;
-                                break;
-                            }
-                            if (s.CondKind == 2)
-                            {
-                                s.ChancePct = nudChance.Value;
-                                s.Negate = false;
-                                break;
-                            }
-                        }
-                        Color c;
-                        if (!ScreenPixel.TryParseHex(tfColor.Text, out c)) return false;
-                        s.Input = ScreenPixel.ToHex(c);
-                        s.MoveX = nudX.Value;
-                        s.MoveY = nudY.Value;
-                        s.Width = nudW.Value;
-                        s.Height = nudH.Value;
-                        s.Tolerance = nudTol.Value;
-                        s.Negate = s.Type == StepType.IfStart && cbCond.SelectedIndex == 1;
-                        break;
-                    }
+                    // condizione principale + aggiuntive (OR / AND): vedi ApplyConds
+                    if (!ApplyConds(s)) return false;
+                    break;
                 case StepType.SetVar:
                     s.VarName = tfVarName.Text.Trim();
                     s.VarOp = Math.Max(0, cbVarOp.SelectedIndex);
@@ -924,18 +1087,7 @@ namespace StepLoop
                     s.DurationMs = nudLoopSec.Value * 1000;
                     s.UseUntil = chkUntil.Checked;
                     s.CheckFirst = chkUntil.Checked && chkCheckFirst.Checked;
-                    if (s.UseUntil)
-                    {
-                        Color u;
-                        if (!ScreenPixel.TryParseHex(tfColor.Text, out u)) return false;
-                        s.Input = ScreenPixel.ToHex(u);
-                        s.MoveX = nudX.Value;
-                        s.MoveY = nudY.Value;
-                        s.Width = nudW.Value;
-                        s.Height = nudH.Value;
-                        s.Tolerance = nudTol.Value;
-                        s.Negate = cbCond.SelectedIndex == 1;
-                    }
+                    if (s.UseUntil && !ApplyConds(s)) return false;
                     break;
             }
             if (s.HasDuration)
@@ -1078,6 +1230,22 @@ namespace StepLoop
                 {
                     editParts = null;
                     partShown = -1;
+                }
+
+                // condizioni (Se / Ripeti fino a / Attendi colore): copia di lavoro con la principale e le aggiuntive
+                if (s.HasCondition)
+                {
+                    editConds = new List<CondClause>();
+                    foreach (CondClause cc in s.AllClauses()) editConds.Add(cc.Clone());
+                    condShown = 0;
+                    segCondJoin.SelectedIndex = s.CondJoin == 1 ? 1 : 0;
+                    RefreshCondSel(0);
+                    LoadCondFields(0);
+                }
+                else
+                {
+                    editConds = null;
+                    condShown = -1;
                 }
             }
             finally { rebuilding = false; }
@@ -1417,7 +1585,12 @@ namespace StepLoop
                 MacroStep s = steps[i];
                 bool positional = s.Type == StepType.ClickAt || s.Type == StepType.MoveTo || s.Type == StepType.WaitPixel
                     || s.Type == StepType.WaitPixelGone || (s.Type == StepType.IfStart && s.CondKind == 0) || (s.Type == StepType.LoopStart && s.UseUntil);
-                if (positional && s.MoveX == 0 && s.MoveY == 0) found.Add(listName + " #" + (i + 1) + " (" + StepStyle.Title(s) + ")");
+                bool unset = positional && s.MoveX == 0 && s.MoveY == 0;
+                // anche le condizioni aggiuntive a colore devono avere una posizione
+                if (!unset && s.ConditionActive && s.Extra != null)
+                    foreach (CondClause c in s.Extra)
+                        if (c != null && c.Kind == CondClause.Color && c.MoveX == 0 && c.MoveY == 0) { unset = true; break; }
+                if (unset) found.Add(listName + " #" + (i + 1) + " (" + StepStyle.Title(s) + ")");
             }
             return string.Join(", ", found.ToArray());
         }

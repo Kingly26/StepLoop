@@ -738,21 +738,21 @@ namespace StepLoop
                 case StepType.WaitPixel:
                 case StepType.WaitPixelGone:
                     if (ScreenPixel.TryParseHex(s.Input, out c)) swatch = c;
-                    d = (s.Type == StepType.WaitPixel ? L.T("compare ", "appears ") : L.T("sparisce ", "disappears ")) + Coord(s) + " · max " + StepStyle.Fmt(s.DurationMs);
+                    d = (s.Type == StepType.WaitPixel ? L.T("compare ", "appears ") : L.T("sparisce ", "disappears ")) + Coord(s) + StepStyle.CondShort(s) + " · max " + StepStyle.Fmt(s.DurationMs);
                     break;
                 case StepType.IfStart:
                     if (s.CondKind == 1)
                     {
-                        d = (s.Negate ? L.T("non vale: ", "not: ") : "") + StepStyle.VarCondText(s);
+                        d = (s.Negate ? L.T("non vale: ", "not: ") : "") + StepStyle.VarCondText(s) + StepStyle.CondShort(s);
                     }
                     else if (s.CondKind == 2)
                     {
-                        d = (s.Negate ? L.T("nel ", "in the other ") + (100 - s.ChancePct) + L.T("% dei casi", "% of cases") : L.T("nel ", "in ") + s.ChancePct + L.T("% dei casi", "% of cases"));
+                        d = (s.Negate ? L.T("nel ", "in the other ") + (100 - s.ChancePct) + L.T("% dei casi", "% of cases") : L.T("nel ", "in ") + s.ChancePct + L.T("% dei casi", "% of cases")) + StepStyle.CondShort(s);
                     }
                     else
                     {
                         if (ScreenPixel.TryParseHex(s.Input, out c)) swatch = c;
-                        d = (s.Negate ? L.T("assente ", "absent ") : L.T("presente ", "present ")) + Coord(s);
+                        d = (s.Negate ? L.T("assente ", "absent ") : L.T("presente ", "present ")) + Coord(s) + StepStyle.CondShort(s);
                     }
                     break;
                 case StepType.ChoiceStart:
@@ -785,7 +785,12 @@ namespace StepLoop
                         if (s.UseUntil)
                         {
                             if (ScreenPixel.TryParseHex(s.Input, out c)) swatch = c;
-                            parts.Add((s.Negate ? L.T("esce se assente ", "exits if absent ") : L.T("esce se presente ", "exits if present ")) + Coord(s));
+                            int nc = s.ExtraCount + 1;
+                            if (nc > 1)
+                                parts.Add(s.CondJoin == 1 ? L.T("esce con tutte e " + nc + " le condizioni", "exits when all " + nc + " conditions hold")
+                                                          : L.T("esce con una tra " + nc + " condizioni", "exits on any of " + nc + " conditions"));
+                            else
+                                parts.Add((s.Negate ? L.T("esce se assente ", "exits if absent ") : L.T("esce se presente ", "exits if present ")) + Coord(s));
                         }
                         if (s.Count > 0) parts.Add("max " + s.Count + L.T(" giri", " rounds"));
                         if (s.DurationMs > 0) parts.Add("max " + StepStyle.Fmt(s.DurationMs));

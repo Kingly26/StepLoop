@@ -429,7 +429,12 @@ namespace StepLoop
 
             // CONTROLLO COLORE
             ColorCheck cc = runner.LastColor;
-            if (cc.Valid)
+            ColorCheck[] checks = runner.LastChecks;
+            if (checks.Length > 1)
+            {
+                DrawChecks(g, checks, px, w, ref y);
+            }
+            else if (cc.Valid)
             {
                 Ui.Text(g, L.T("CONTROLLO COLORE · (", "COLOR CHECK · (") + cc.X + ", " + cc.Y + ")", Ui.F(7.5f, true), new Rectangle(px, y, w, Ui.S(16)), Pal.Muted, Ui.Left);
                 y += Ui.S(22);
@@ -535,6 +540,31 @@ namespace StepLoop
                               "Editing is locked while running. Press Stop to go back to the editor.");
             Rectangle nr = new Rectangle(px, Height - Ui.S(54), w, Ui.S(44));
             TextRenderer.DrawText(g, note, Ui.F(8.75f), nr, Pal.Muted, TextFormatFlags.Left | TextFormatFlags.Bottom | TextFormatFlags.WordBreak | TextFormatFlags.NoPadding);
+        }
+
+        // Più condizioni a colore (OR / AND): una riga per condizione con atteso, letto, posizione ed esito.
+        void DrawChecks(Graphics g, ColorCheck[] checks, int px, int w, ref int y)
+        {
+            Ui.Text(g, L.T("CONTROLLO COLORE · ", "COLOR CHECK · ") + checks.Length + L.T(" condizioni", " conditions"),
+                Ui.F(7.5f, true), new Rectangle(px, y, w, Ui.S(16)), Pal.Muted, Ui.Left);
+            y += Ui.S(24);
+            int sw = Ui.S(22);
+            foreach (ColorCheck k in checks)
+            {
+                Rectangle r1 = new Rectangle(px, y, sw, sw), r2 = new Rectangle(px + sw + Ui.S(6), y, sw, sw);
+                Ui.FillRound(g, r1, Ui.S(5), k.Expected.IsEmpty ? Pal.Raised : k.Expected);
+                Ui.DrawRound(g, r1, Ui.S(5), Pal.Over(Pal.Panel, Color.White, 0.25), 1f);
+                Ui.FillRound(g, r2, Ui.S(5), k.Read.IsEmpty ? Pal.Raised : k.Read);
+                Ui.DrawRound(g, r2, Ui.S(5), Pal.Over(Pal.Panel, Color.White, 0.25), 1f);
+                int tx = r2.Right + Ui.S(10);
+                string state = k.Match ? L.T("sì", "yes") : L.T("no", "no");
+                int sw2 = Ui.Measure(g, state, Ui.F(9f, true)) + Ui.S(4);
+                Ui.Text(g, "#" + ScreenPixel.ToHex(k.Expected) + " · Δ " + k.Delta, Ui.M(8.5f), new Rectangle(tx, y - Ui.S(1), px + w - tx - sw2 - Ui.S(6), Ui.S(13)), Pal.Text2, Ui.Left);
+                Ui.Text(g, "(" + k.X + ", " + k.Y + ")", Ui.F(8.25f), new Rectangle(tx, y + Ui.S(12), px + w - tx - sw2 - Ui.S(6), Ui.S(13)), Pal.Muted, Ui.Left);
+                Ui.Text(g, state, Ui.F(9f, true), new Rectangle(px + w - sw2, y, sw2, sw), k.Match ? Pal.Ok : Pal.Warn, Ui.Right);
+                y += sw + Ui.S(8);
+            }
+            y += Ui.S(12);
         }
 
         void Swatch(Graphics g, Point p, Color c, string caption)

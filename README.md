@@ -39,6 +39,9 @@ You build a **sequence of steps** by dragging blocks from the palette (or double
 - **Together:** keys, click, mouse and aim start at the same moment, each with its own random duration
   (by default 1–3 s, with a 10% chance of up to 10 s).
 - **Color conditions:** pick from the screen (F9), area preview, *Test now* button.
+- **Multiple conditions (OR / AND):** every condition (*If*, *Repeat until*, *Wait for color* / *to disappear*) can have up to 4 checks —
+  another color, a variable or a probability — and you choose whether any one of them (OR) or all of them (AND) must be true.
+  For example, a loop can exit when color A *or* color B shows up. The end-of-match color accepts extra colors too.
 - **Recording (REC)** of clicks and keys, **automatic match restart** (the "Match restart (menu)" tab).
 - **While running:** live panel (current block, color check, variables, next steps), filterable log, pause, *Simulation*
   (no real input is sent).
@@ -125,6 +128,9 @@ Costruisci una **sequenza di passi** trascinando i blocchi dalla palette (o con 
 - **Insieme:** tasti, click, mouse e mira partono nello stesso istante, ciascuno con la propria durata casuale
   (di default 1–3 s, con il 10% delle volte fino a 10 s).
 - **Condizioni sui colori:** selezione dallo schermo (F9), anteprima dell'area, pulsante *Testa ora*.
+- **Più condizioni (OR / AND):** ogni condizione (*Se*, *Ripeti fino a*, *Attendi colore* / *che sparisca*) può avere fino a 4 controlli —
+  un altro colore, una variabile o una probabilità — e scegli se basta una qualsiasi (OR) o servono tutte (AND).
+  Per esempio un ciclo può uscire quando compare il colore A *oppure* il colore B. Anche il colore di fine partita accetta altri colori.
 - **Registrazione (REC)** di click e tasti, **riavvio automatico partita** (scheda "Riavvio partita (menu)").
 - **Esecuzione:** pannello live (blocco corrente, controllo colore, variabili, prossimi step), log filtrabile, pausa, *Simulazione*
   (nessun input reale).

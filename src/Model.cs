@@ -15,7 +15,7 @@ using System.Windows.Forms;
 using System.Xml;
 
 [assembly: System.Reflection.AssemblyTitle("StepLoop")]
-[assembly: System.Reflection.AssemblyVersion("6.0.1.0")]
+[assembly: System.Reflection.AssemblyVersion("6.1.0.0")]
 
 namespace StepLoop
 {
@@ -244,6 +244,42 @@ namespace StepLoop
         }
     }
 
+    // Una condizione in più di un "Se", di un "Ripeti fino a" o di un "Attendi colore": si combina con la condizione principale
+    // del passo (che resta nei campi del passo, per la compatibilità con i profili salvati) in OR (basta una) o in AND (tutte).
+    [DataContract]
+    public class CondClause
+    {
+        public const int Color = 0, Variable = 1, Chance = 2;
+        public const int MaxClauses = 4;            // principale + 3 aggiuntive
+
+        [DataMember] public int Kind;                // 0 colore a schermo, 1 variabile, 2 probabilità
+        [DataMember(EmitDefaultValue = false)] public string Input = "FFFFFF";   // colore RRGGBB
+        [DataMember] public int MoveX;
+        [DataMember] public int MoveY;
+        [DataMember] public int Width = 1;
+        [DataMember] public int Height = 1;
+        [DataMember] public int Tolerance = 24;
+        [DataMember] public bool Negate;             // colore: "NON è presente"
+        [DataMember(EmitDefaultValue = false)] public string VarName;
+        [DataMember] public int CmpOp;               // 0 ==, 1 !=, 2 <, 3 <=, 4 >, 5 >=
+        [DataMember] public int CmpValue;
+        [DataMember] public int ChancePct = 50;
+
+        public CondClause Clone() { return (CondClause)MemberwiseClone(); }
+
+        public void Sanitize()
+        {
+            Kind = Math.Min(2, Math.Max(0, Kind));
+            if (Input == null) Input = "";
+            Width = Math.Max(1, Width);
+            Height = Math.Max(1, Height);
+            Tolerance = Math.Min(255, Math.Max(0, Tolerance));
+            CmpOp = Math.Min(5, Math.Max(0, CmpOp));
+            ChancePct = Math.Min(100, Math.Max(0, ChancePct));
+            if (VarName != null) VarName = VarName.Trim();
+        }
+    }
+
     [DataContract]
     public class MacroStep
     {
@@ -296,6 +332,9 @@ namespace StepLoop
         [DataMember] public int PickCount;
         // "Scegli a caso": peso della prima alternativa (le altre sono pesate dalle Opzioni); 0 = 1.
         [DataMember(EmitDefaultValue = false)] public int AltWeight;
+        // Condizioni aggiuntive (Se / Ripeti fino a / Attendi colore) e come si combinano con quella principale: 0 = OR, 1 = AND.
+        [DataMember(EmitDefaultValue = false)] public CondClause[] Extra;
+        [DataMember(EmitDefaultValue = false)] public int CondJoin;
 
         // Calcolati da Flow.Prepare, non salvati nel profilo.
         public int Match = -1;
@@ -310,8 +349,71 @@ namespace StepLoop
                 c.Parts = new ComboPart[Parts.Length];
                 for (int i = 0; i < Parts.Length; i++) c.Parts[i] = Parts[i] == null ? null : Parts[i].Clone();
             }
+            if (Extra != null)
+            {
+                c.Extra = new CondClause[Extra.Length];
+                for (int i = 0; i < Extra.Length; i++) c.Extra[i] = Extra[i] == null ? null : Extra[i].Clone();
+            }
             c.OptionMarks = null;
             return c;
+        }
+
+        // ---- condizioni: la principale (campi del passo) + le aggiuntive (Extra) ----
+
+        // Passi che hanno una condizione sul colore / variabile / caso.
+        public bool HasCondition
+        {
+            get { return Type == StepType.IfStart || Type == StepType.LoopStart || Type == StepType.WaitPixel || Type == StepType.WaitPixelGone; }
+        }
+
+        // La condizione è davvero usata: un Ripeti la usa solo se ha "esci quando…".
+        public bool ConditionActive
+        {
+            get { return Type == StepType.IfStart || Type == StepType.WaitPixel || Type == StepType.WaitPixelGone || (Type == StepType.LoopStart && UseUntil); }
+        }
+
+        public int ExtraCount
+        {
+            get
+            {
+                int n = 0;
+                if (Extra != null) foreach (CondClause c in Extra) if (c != null) n++;
+                return n;
+            }
+        }
+
+        // La condizione principale del passo come clausola (Se: del tipo scelto; Ripeti / Attendi: sempre colore).
+        public CondClause PrimaryClause()
+        {
+            CondClause c = new CondClause();
+            c.Kind = Type == StepType.IfStart ? Math.Min(2, Math.Max(0, CondKind)) : CondClause.Color;
+            c.Input = Input ?? "";
+            c.MoveX = MoveX; c.MoveY = MoveY; c.Width = Width; c.Height = Height; c.Tolerance = Tolerance;
+            c.Negate = (Type == StepType.IfStart || Type == StepType.LoopStart) && Negate;
+            c.VarName = VarName; c.CmpOp = CmpOp; c.CmpValue = CmpValue; c.ChancePct = ChancePct;
+            return c;
+        }
+
+        // Scrive una clausola nei campi della condizione principale (solo i campi pertinenti al tipo di passo).
+        public void ApplyPrimary(CondClause c)
+        {
+            if (Type == StepType.IfStart)
+            {
+                CondKind = c.Kind;
+                if (c.Kind == CondClause.Variable) { VarName = c.VarName; CmpOp = c.CmpOp; CmpValue = c.CmpValue; Negate = false; return; }
+                if (c.Kind == CondClause.Chance) { ChancePct = c.ChancePct; Negate = false; return; }
+            }
+            Input = c.Input; MoveX = c.MoveX; MoveY = c.MoveY; Width = c.Width; Height = c.Height; Tolerance = c.Tolerance;
+            if (Type == StepType.IfStart || Type == StepType.LoopStart) Negate = c.Negate;
+        }
+
+        // Tutte le clausole della condizione, la principale per prima.
+        public List<CondClause> AllClauses()
+        {
+            List<CondClause> l = new List<CondClause>();
+            l.Add(PrimaryClause());
+            if (Extra != null) foreach (CondClause c in Extra) if (c != null) l.Add(c);
+            return l;
         }
 
         public static MacroStep Make(StepType type)
@@ -608,6 +710,19 @@ namespace StepLoop
             PickCount = Math.Max(0, PickCount);
             AltWeight = Math.Max(0, AltWeight);
             if (VarName != null) VarName = VarName.Trim();
+            CondJoin = CondJoin == 1 ? 1 : 0;
+            if (Extra != null)
+            {
+                // niente voci vuote e al massimo 3 condizioni aggiuntive (4 in tutto con la principale)
+                List<CondClause> keep = new List<CondClause>();
+                foreach (CondClause c in Extra)
+                {
+                    if (c == null || keep.Count >= CondClause.MaxClauses - 1) continue;
+                    c.Sanitize();
+                    keep.Add(c);
+                }
+                Extra = keep.Count == 0 ? null : keep.ToArray();
+            }
             if (!Enum.IsDefined(typeof(StepType), Type)) Type = StepType.Wait;
             if (Type == StepType.Combo)
             {
@@ -732,18 +847,18 @@ namespace StepLoop
                 case StepType.Wait:
                     return L.T("Aspetta il tempo indicato (fisso o casuale).", "Waits for the given time (fixed or random).");
                 case StepType.WaitPixel:
-                    return L.T("Aspetta che l'area dello schermo assuma il colore indicato.", "Waits until the screen area takes the given color.");
+                    return L.T("Aspetta che l'area dello schermo assuma il colore indicato (o che si verifichi una delle condizioni aggiuntive, in OR).", "Waits until the screen area takes the given color (or until one of the extra conditions is true, as OR).");
                 case StepType.WaitPixelGone:
-                    return L.T("Aspetta che l'area smetta di avere il colore indicato.", "Waits until the area stops having the given color.");
+                    return L.T("Aspetta che l'area smetta di avere il colore indicato (con più condizioni: finché nessuna è vera, in OR).", "Waits until the area stops having the given color (with several conditions: until none is true, as OR).");
                 case StepType.LoopStart:
-                    return L.T("Ripete i passi che contiene. Alla fine di ogni giro controlla se può uscire; se no, ricomincia.",
-                               "Repeats the steps it contains. At the end of each round it checks whether it can exit; if not, it starts again.");
+                    return L.T("Ripete i passi che contiene. Alla fine di ogni giro controlla se può uscire (anche con più colori in OR); se no, ricomincia.",
+                               "Repeats the steps it contains. At the end of each round it checks whether it can exit (also with several colors as OR); if not, it starts again.");
                 case StepType.LoopEnd:
                     return L.T("Fine del ciclo: si torna al primo passo del Ripeti, a meno che la condizione di uscita sia soddisfatta.",
                                "End of the loop: goes back to the first step of the Repeat, unless the exit condition is met.");
                 case StepType.IfStart:
-                    return L.T("Esegue i passi seguenti solo se la condizione sul colore è vera.",
-                               "Runs the following steps only if the color condition is true.");
+                    return L.T("Esegue i passi seguenti solo se la condizione è vera (un colore, una variabile o il caso). Puoi aggiungere altre condizioni in OR o in AND.",
+                               "Runs the following steps only if the condition is true (a color, a variable or chance). You can add more conditions combined with OR or AND.");
                 case StepType.Else:
                     return L.T("Passi eseguiti quando la condizione del 'Se' è falsa.", "Steps run when the 'If' condition is false.");
                 case StepType.IfEnd:
@@ -860,6 +975,34 @@ namespace StepLoop
             return n + " " + CmpSymbol(s.CmpOp) + " " + s.CmpValue;
         }
 
+        // "  ·  +2 condizioni (OR)": le condizioni aggiuntive di un Se / Ripeti fino a / Attendi colore
+        public static string CondSuffix(MacroStep s)
+        {
+            int n = s.ExtraCount;
+            if (n == 0 || !s.ConditionActive) return "";
+            return "  ·  +" + n + L.T(n == 1 ? " condizione" : " condizioni", n == 1 ? " condition" : " conditions")
+                + " (" + (s.CondJoin == 1 ? "AND" : "OR") + ")";
+        }
+
+        // Versione corta per le righe della lista: "  ·  +2 OR"
+        public static string CondShort(MacroStep s)
+        {
+            int n = s.ExtraCount;
+            if (n == 0 || !s.ConditionActive) return "";
+            return "  ·  +" + n + " " + (s.CondJoin == 1 ? "AND" : "OR");
+        }
+
+        // Testo breve di una clausola, per i log: "#1FA84A presente @ (10, 20)", "giri ≥ 5", "30%"
+        public static string ClauseText(CondClause c)
+        {
+            if (c.Kind == CondClause.Variable)
+                return (string.IsNullOrEmpty(c.VarName) ? "?" : c.VarName) + " " + CmpSymbol(c.CmpOp) + " " + c.CmpValue;
+            if (c.Kind == CondClause.Chance)
+                return L.T("a caso ", "random ") + c.ChancePct + "%";
+            return "#" + (c.Input ?? "").ToUpperInvariant() + (c.Negate ? L.T(" NON presente", " NOT present") : L.T(" presente", " present"))
+                + " @ (" + c.MoveX + ", " + c.MoveY + ")";
+        }
+
         // "x = 5", "x + 1", "x − 2", "x = a caso 1..6"
         public static string VarOpText(MacroStep s)
         {
@@ -922,15 +1065,15 @@ namespace StepLoop
                     break;
                 case StepType.WaitPixel:
                     if (ScreenPixel.TryParseHex(s.Input, out c)) swatch = c;
-                    return "#" + s.Input + L.T(" su ", " on ") + Area(s) + "  -  max " + Fmt(s.DurationMs);
+                    return "#" + s.Input + L.T(" su ", " on ") + Area(s) + CondSuffix(s) + "  -  max " + Fmt(s.DurationMs);
                 case StepType.WaitPixelGone:
                     if (ScreenPixel.TryParseHex(s.Input, out c)) swatch = c;
-                    return "#" + s.Input + L.T(" deve sparire da ", " must disappear from ") + Area(s) + "  -  max " + Fmt(s.DurationMs);
+                    return "#" + s.Input + L.T(" deve sparire da ", " must disappear from ") + Area(s) + CondSuffix(s) + "  -  max " + Fmt(s.DurationMs);
                 case StepType.IfStart:
-                    if (s.CondKind == 1) return (s.Negate ? L.T("NON ", "NOT ") : "") + VarCondText(s);
-                    if (s.CondKind == 2) return L.T("a caso, ", "random, ") + s.ChancePct + L.T("% delle volte", "% of the time") + (s.Negate ? L.T(" (invertito)", " (inverted)") : "");
+                    if (s.CondKind == 1) return (s.Negate ? L.T("NON ", "NOT ") : "") + VarCondText(s) + CondSuffix(s);
+                    if (s.CondKind == 2) return L.T("a caso, ", "random, ") + s.ChancePct + L.T("% delle volte", "% of the time") + (s.Negate ? L.T(" (invertito)", " (inverted)") : "") + CondSuffix(s);
                     if (ScreenPixel.TryParseHex(s.Input, out c)) swatch = c;
-                    return "#" + s.Input + (s.Negate ? L.T(" NON è presente su ", " is NOT present on ") : L.T(" è presente su ", " is present on ")) + Area(s);
+                    return "#" + s.Input + (s.Negate ? L.T(" NON è presente su ", " is NOT present on ") : L.T(" è presente su ", " is present on ")) + Area(s) + CondSuffix(s);
                 case StepType.ChoiceStart:
                     return L.T("una sola alternativa, a caso", "only one alternative, at random");
                 case StepType.Option:
@@ -949,7 +1092,7 @@ namespace StepLoop
                             if (ScreenPixel.TryParseHex(s.Input, out c)) swatch = c;
                             parts.Add(L.T("esci quando #", "exit when #") + s.Input
                                 + (s.Negate ? L.T(" NON è presente su ", " is NOT present on ") : L.T(" è presente su ", " is present on ")) + Area(s)
-                                + (s.CheckFirst ? L.T(" (controlla anche all'inizio)", " (also checked at the start)") : ""));
+                                + CondSuffix(s) + (s.CheckFirst ? L.T(" (controlla anche all'inizio)", " (also checked at the start)") : ""));
                         }
                         if (s.Count > 0) parts.Add("max " + s.Count + L.T(" giri", " rounds"));
                         if (s.DurationMs > 0) parts.Add("max " + Fmt(s.DurationMs));
@@ -1214,6 +1357,8 @@ namespace StepLoop
         [DataMember] public int EndH = 1;
         [DataMember] public string EndColor = "000000";
         [DataMember] public int EndTolerance = 12;
+        // Altri colori che segnano la fine della partita (stessa area e tolleranza), separati da virgola: basta uno qualsiasi (OR).
+        [DataMember(EmitDefaultValue = false)] public string EndExtra;
         [DataMember] public List<MacroStep> MenuSteps = new List<MacroStep>();
 
         public Profile Clone()
@@ -1262,6 +1407,7 @@ namespace StepLoop
             if (p.WindowTitle == null) p.WindowTitle = "";
             Color c;
             if (!ScreenPixel.TryParseHex(p.EndColor, out c)) p.EndColor = "000000";
+            p.EndExtra = ScreenPixel.NormalizeColorList(p.EndExtra);
             p.StartDelaySec = Math.Min(60, Math.Max(0, p.StartDelaySec));
             p.Cycles = Math.Max(0, p.Cycles);
             p.GameSeconds = Math.Max(0, p.GameSeconds);
