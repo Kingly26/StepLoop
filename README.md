@@ -74,6 +74,9 @@ build.bat   build script
 
 - `F8` always starts/stops the macro, even inside the game; `F7` pauses it and releases the keys.
 - Color waits work with the game windowed or borderless (in exclusive fullscreen the pixels cannot be read).
+- Put the game in fullscreen (borderless is best, so colors stay readable) or enlarge the window to cover the whole screen: if the
+  window does not cover the screen, the cursor can leave it when the macro moves the mouse and the clicks land outside the game.
+  With *Only if window active* the macro suspends input until the game is back in the foreground.
 - If the game runs as administrator, run StepLoop as administrator too.
 - Always try profiles with **Simulation** before using them for real.
 - For very long sessions, lower the game's resolution and graphics quality and cap the FPS.
@@ -165,6 +168,9 @@ build.bat   compilazione
 
 - `F8` avvia/ferma sempre la macro, anche dentro il gioco; `F7` la mette in pausa rilasciando i tasti.
 - Le attese a colore funzionano con il gioco in finestra o a schermo intero senza bordi (in schermo intero esclusivo i pixel non si leggono).
+- Metti il gioco a schermo intero (meglio senza bordi, così i colori restano leggibili) o ingrandisci la finestra a tutto schermo: se la
+  finestra non copre lo schermo, il cursore può uscirne quando la macro muove il mouse e i click andare fuori dal gioco.
+  Con *Solo se finestra attiva* la macro sospende gli input finché il gioco non torna in primo piano.
 - Se il gioco gira come amministratore, avvia anche StepLoop come amministratore.
 - Prova sempre i profili con **Simulazione** prima di usarli davvero.
 - Per sessioni molto lunghe conviene ridurre risoluzione e qualità grafica del gioco e limitare gli FPS.
