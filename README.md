@@ -40,6 +40,10 @@ You build a **sequence of steps** by dragging blocks from the palette (or double
   sequence, without stopping the macro. It does not count as a finished repetition, and it can also clear the variables.
 - **Together:** keys, click, mouse and aim start at the same moment, each with its own random duration
   (by default 1–3 s, with a 10% chance of up to 10 s).
+- **Resolution conversion:** made your profile on a 4K screen and someone else plays at 1080p? The **Resolution…** button converts all the
+  coordinates of the profile (clicks, color areas, end-of-match area) from one screen resolution to another: pick the resolutions from a list
+  or type them, optionally shift everything for a game in a window, and see the factor and what will change before confirming.
+  Durations, tolerances, colors and relative mouse movements are not touched. The file only changes when you save, and the profile remembers its resolution.
 - **Color conditions:** pick from the screen (F9), area preview, *Test now* button.
 - **Multiple conditions (OR / AND):** every condition (*If*, *Repeat until*, *Wait for color* / *to disappear*) can have up to 4 checks —
   another color, a variable or a probability — and you choose whether any one of them (OR) or all of them (AND) must be true.
@@ -52,7 +56,8 @@ You build a **sequence of steps** by dragging blocks from the palette (or double
 ## Sample profiles
 
 Ready-made profiles are in the [`profiles/`](profiles) folder: open them with *Load profile…* (or the first time, copy the folder next to
-`StepLoop.exe`). They target **Rainbow Six Siege** (the window title filter is set to "Rainbow Six").
+`StepLoop.exe`). They are also attached to **every Release** as `profiles.zip` (extract it next to `StepLoop.exe`).
+They target **Rainbow Six Siege** (the window title filter is set to "Rainbow Six").
 
 | Profile | What it is |
 | --- | --- |
@@ -60,7 +65,9 @@ Ready-made profiles are in the [`profiles/`](profiles) folder: open them with *L
 | [`Wasteland Circuit Y11S3.json`](profiles/Wasteland%20Circuit%20Y11S3.json) and [`… low res.json`](profiles/Wasteland%20Circuit%20Y11S3%20low%20res.json) | Wasteland Circuit (Y11S3): the normal one and a *low res* variant (for the game at low resolution, with another reference color and a slightly different ending). |
 
 **Important:** the click points and color areas are **screen coordinates picked on the author's screen** (a **4K, 3840×2160** screen).
-At a different resolution, window mode or UI scale you have to pick them again (*Pick from the screen…* in the inspector, F9) and check with *Test now*.
+On a different resolution, open **Resolution…** (bottom bar): choose *3840 × 2160* as the source and your screen (or any resolution) as the target, and
+every click point, color area and end-of-match area is converted in one go (see [Resolution conversion](#what-it-does)).
+Then check the important points with *Test now* (*Pick from the screen…* in the inspector, F9, to fix a single point): with another aspect ratio or UI scale the game interface may not match exactly.
 Try the profile with **Simulation** first, and use it only where automation is allowed (for example in events or modes that explicitly permit it):
 you are responsible for following the game's rules (see the warning at the top).
 
@@ -149,6 +156,10 @@ Costruisci una **sequenza di passi** trascinando i blocchi dalla palette (o con 
   senza fermare la macro. Non conta come una ripetizione completata e può azzerare anche le variabili.
 - **Insieme:** tasti, click, mouse e mira partono nello stesso istante, ciascuno con la propria durata casuale
   (di default 1–3 s, con il 10% delle volte fino a 10 s).
+- **Conversione della risoluzione:** hai fatto il profilo su uno schermo 4K e un altro gioca a 1080p? Il pulsante **Risoluzione…** converte tutte le
+  coordinate del profilo (clic, aree dei colori, area di fine partita) da una risoluzione dello schermo a un'altra: scegli le risoluzioni da un elenco
+  o scrivile, se serve sposta tutto per un gioco in finestra, e vedi il fattore e cosa cambierà prima di confermare.
+  Durate, tolleranze, colori e movimenti relativi del mouse non si toccano. Il file cambia solo quando salvi e il profilo ricorda la sua risoluzione.
 - **Condizioni sui colori:** selezione dallo schermo (F9), anteprima dell'area, pulsante *Testa ora*.
 - **Più condizioni (OR / AND):** ogni condizione (*Se*, *Ripeti fino a*, *Attendi colore* / *che sparisca*) può avere fino a 4 controlli —
   un altro colore, una variabile o una probabilità — e scegli se basta una qualsiasi (OR) o servono tutte (AND).
@@ -161,7 +172,8 @@ Costruisci una **sequenza di passi** trascinando i blocchi dalla palette (o con 
 ## Profili di esempio
 
 I profili pronti sono nella cartella [`profiles/`](profiles): aprili con *Carica profilo…* (o, la prima volta, copia la cartella accanto a
-`StepLoop.exe`). Sono pensati per **Rainbow Six Siege** (il filtro sulla finestra è impostato su "Rainbow Six").
+`StepLoop.exe`). Sono allegati anche a **ogni Release** come `profiles.zip` (estrailo accanto a `StepLoop.exe`).
+Sono pensati per **Rainbow Six Siege** (il filtro sulla finestra è impostato su "Rainbow Six").
 
 | Profilo | Cos'è |
 | --- | --- |
@@ -169,7 +181,9 @@ I profili pronti sono nella cartella [`profiles/`](profiles): aprili con *Carica
 | [`Wasteland Circuit Y11S3.json`](profiles/Wasteland%20Circuit%20Y11S3.json) e [`… low res.json`](profiles/Wasteland%20Circuit%20Y11S3%20low%20res.json) | Wasteland Circuit (Y11S3): quello normale e una variante *low res* (per il gioco a bassa risoluzione, con un altro colore di riferimento e un finale leggermente diverso). |
 
 **Importante:** i punti di click e le aree di colore sono **coordinate dello schermo scelte sullo schermo dell'autore** (uno schermo **4K, 3840×2160**).
-Con un'altra risoluzione, modalità finestra o scala dell'interfaccia vanno scelti di nuovo (*Seleziona dallo schermo…* nell'ispettore, F9) e controllati con *Testa ora*.
+Con un'altra risoluzione apri **Risoluzione…** (barra in basso): scegli *3840 × 2160* come partenza e il tuo schermo (o una risoluzione qualsiasi) come arrivo, e
+tutti i punti di click, le aree di colore e l'area di fine partita vengono convertiti in un colpo solo (vedi [Conversione della risoluzione](#cosa-fa)).
+Poi controlla i punti importanti con *Testa ora* (*Seleziona dallo schermo…* nell'ispettore, F9, per correggere un singolo punto): con un altro formato o scala dell'interfaccia l'interfaccia del gioco può non coincidere perfettamente.
 Prova il profilo con **Simulazione** prima, e usalo solo dove l'automazione è consentita (per esempio in eventi o modalità che la permettono esplicitamente):
 sei responsabile del rispetto delle regole del gioco (vedi l'avviso in alto).
 

@@ -81,7 +81,7 @@ namespace StepLoop
         LivePanel livePanel;
         LogView logView;
         StatCard statRep, statTime, statCycle, statStep;
-        FlatButton btnStart, btnPause, btnRec, btnSave, btnLoad, btnDuplicate, btnRemove, btnUp, btnDown;
+        FlatButton btnStart, btnPause, btnRec, btnSave, btnLoad, btnResolution, btnDuplicate, btnRemove, btnUp, btnDown;
         FlatButton btnHint, btnTheme, btnLang, btnPick, btnTest, btnEndPick;
 
         // impostazioni
@@ -475,6 +475,15 @@ namespace StepLoop
             btnLoad.Click += delegate { LoadProfileDialog(); };
             bottomBar.Controls.Add(btnLoad);
 
+            btnResolution = new FlatButton();
+            btnResolution.Icon = Glyph.Screen;
+            btnResolution.Radius = 8;
+            Loc(btnResolution, "Risoluzione…", "Resolution…");
+            btnResolution.Click += delegate { ScaleResolutionDialog(); };
+            bottomBar.Controls.Add(btnResolution);
+            Tip(btnResolution, "Converte tutte le coordinate del profilo (clic, aree dei colori) a un'altra risoluzione dello schermo: scegli quella di partenza e di arrivo da un elenco o scrivile.",
+                               "Converts all the coordinates of the profile (clicks, color areas) to another screen resolution: pick the source and target from a list or type them.");
+
             lblStatusTitle = new UiLabel();
             lblStatusTitle.Style = UiLabel.Role.Strong;
             bottomBar.Controls.Add(lblStatusTitle);
@@ -512,17 +521,18 @@ namespace StepLoop
         void LayoutBottom()
         {
             int y = S(10), h = S(52), x = 0, gap = S(10);
-            btnStart.SetBounds(x, y, S(200), h); x += S(200) + gap;
-            btnPause.SetBounds(x, y, S(160), h); x += S(160) + gap;
-            btnRec.SetBounds(x, y, S(100), h); x += S(100) + gap;
-            btnSave.SetBounds(x, y, S(150), h); x += S(150) + gap;
-            btnLoad.SetBounds(x, y, S(150), h); x += S(150) + gap * 2;
+            btnStart.SetBounds(x, y, S(180), h); x += S(180) + gap;
+            btnPause.SetBounds(x, y, S(135), h); x += S(135) + gap;
+            btnRec.SetBounds(x, y, S(90), h); x += S(90) + gap;
+            btnSave.SetBounds(x, y, S(130), h); x += S(130) + gap;
+            btnLoad.SetBounds(x, y, S(130), h); x += S(130) + gap;
+            btnResolution.SetBounds(x, y, S(135), h); x += S(135) + gap * 2;
             int right = bottomBar.Width;
             int ib = S(38);
             btnLang.SetBounds(right - ib, y + (h - ib) / 2, ib, ib); right -= ib + S(8);
             btnTheme.SetBounds(right - ib, y + (h - ib) / 2, ib, ib); right -= ib + S(8);
             btnHint.SetBounds(right - ib, y + (h - ib) / 2, ib, ib); right -= ib + S(14);
-            int tw = Math.Max(S(120), right - x);
+            int tw = Math.Max(S(60), right - x);
             lblStatusTitle.SetBounds(x, y + S(6), tw, S(22));
             lblStatusSub.SetBounds(x, y + S(28), tw, S(20));
         }

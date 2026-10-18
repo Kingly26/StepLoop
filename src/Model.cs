@@ -15,7 +15,7 @@ using System.Windows.Forms;
 using System.Xml;
 
 [assembly: System.Reflection.AssemblyTitle("StepLoop")]
-[assembly: System.Reflection.AssemblyVersion("6.2.1.0")]
+[assembly: System.Reflection.AssemblyVersion("6.3.0.0")]
 
 namespace StepLoop
 {
@@ -1378,6 +1378,9 @@ namespace StepLoop
         [DataMember] public int EndTolerance = 12;
         // Altri colori che segnano la fine della partita (stessa area e tolleranza), separati da virgola: basta uno qualsiasi (OR).
         [DataMember(EmitDefaultValue = false)] public string EndExtra;
+        // Risoluzione dello schermo per cui sono state scelte le coordinate del profilo (0 = sconosciuta): preimposta «Risoluzione…».
+        [DataMember(EmitDefaultValue = false)] public int RefW;
+        [DataMember(EmitDefaultValue = false)] public int RefH;
         [DataMember] public List<MacroStep> MenuSteps = new List<MacroStep>();
 
         public Profile Clone()
@@ -1427,6 +1430,7 @@ namespace StepLoop
             Color c;
             if (!ScreenPixel.TryParseHex(p.EndColor, out c)) p.EndColor = "000000";
             p.EndExtra = ScreenPixel.NormalizeColorList(p.EndExtra);
+            if (p.RefW < 100 || p.RefH < 100 || p.RefW > 30000 || p.RefH > 30000) { p.RefW = 0; p.RefH = 0; }
             p.StartDelaySec = Math.Min(60, Math.Max(0, p.StartDelaySec));
             p.Cycles = Math.Max(0, p.Cycles);
             p.GameSeconds = Math.Max(0, p.GameSeconds);

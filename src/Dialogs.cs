@@ -169,7 +169,9 @@ namespace StepLoop
                 + "con durate casuali, e le variabili con i \"Se\" permettono di contare e decidere (es. fai una cosa ogni 5 giri).\r\n"
                 + "- Ogni condizione (Se, Ripeti fino a, Attendi colore) può avere più controlli: aggiungi un altro colore con «+» e scegli se basta uno (OR) "
                 + "o servono tutti (AND), per esempio per uscire da un ciclo quando compare un colore oppure un altro.\r\n"
-                + "- \"Reset\" ricomincia dal primo passo da qualsiasi punto (anche dentro cicli e Se) senza fermare la macro.",
+                + "- \"Reset\" ricomincia dal primo passo da qualsiasi punto (anche dentro cicli e Se) senza fermare la macro.\r\n"
+                + "- Un profilo fatto per un'altra risoluzione (es. i profili di esempio sono per 3840 × 2160)? Il pulsante \"Risoluzione…\" converte tutti i punti e le aree "
+                + "scegliendo la risoluzione di partenza e di arrivo da un elenco o scrivendole; poi controlla i punti con \"Testa ora\".",
                 "- " + stopKey + " always starts and stops the macro, even inside the game. " + pauseKey + " pauses it without leaving: "
                 + "it releases the keys and presses them again when you resume.\r\n"
                 + "- Color waits work with the game windowed or borderless: in exclusive fullscreen the pixels cannot be read.\r\n"
@@ -181,7 +183,9 @@ namespace StepLoop
                 + "with random durations, and variables with \"If\" let you count and decide (e.g. do something every 5 rounds).\r\n"
                 + "- Every condition (If, Repeat until, Wait for color) can have several checks: add another color with «+» and choose whether any one (OR) "
                 + "or all of them (AND) must hold, e.g. to leave a loop when one color or another shows up.\r\n"
-                + "- \"Reset\" starts again from the first step from anywhere (even inside loops and Ifs) without stopping the macro."));
+                + "- \"Reset\" starts again from the first step from anywhere (even inside loops and Ifs) without stopping the macro.\r\n"
+                + "- A profile made for another resolution (the sample profiles are for 3840 × 2160)? The \"Resolution…\" button converts every point and area, "
+                + "choosing the source and target resolution from a list or typing them; then check the points with \"Test now\"."));
 
             AddHeading(L.T("Esclusione di responsabilità", "Disclaimer"));
             AddBody(L.T(

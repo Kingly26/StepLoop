@@ -254,7 +254,7 @@ namespace StepLoop
 
     public enum Glyph
     {
-        None, Copy, Trash, Up, Down, Play, Stop, Pause, Rec, Save, Open, Bulb, Theme, Plus, Crosshair, Chevron, Check, Eye, Close
+        None, Copy, Trash, Up, Down, Play, Stop, Pause, Rec, Save, Open, Bulb, Theme, Plus, Crosshair, Chevron, Check, Eye, Close, Screen
     }
 
     public static class Icons
@@ -354,6 +354,15 @@ namespace StepLoop
                     case Glyph.Close:
                         g.DrawLine(pen, cx - 4 * u, cy - 4 * u, cx + 4 * u, cy + 4 * u);
                         g.DrawLine(pen, cx - 4 * u, cy + 4 * u, cx + 4 * u, cy - 4 * u);
+                        break;
+                    case Glyph.Screen:
+                        // monitor con una freccia diagonale (ridimensiona)
+                        g.DrawRectangle(pen, cx - 7 * u, cy - 6 * u, 14 * u, 9.5f * u);
+                        g.DrawLine(pen, cx, cy + 3.5f * u, cx, cy + 6 * u);
+                        g.DrawLine(pen, cx - 3 * u, cy + 6 * u, cx + 3 * u, cy + 6 * u);
+                        g.DrawLine(pen, cx - 3.2f * u, cy + 0.8f * u, cx + 3.2f * u, cy - 3.6f * u);
+                        g.DrawLine(pen, cx + 3.2f * u, cy - 3.6f * u, cx + 0.6f * u, cy - 3.6f * u);
+                        g.DrawLine(pen, cx + 3.2f * u, cy - 3.6f * u, cx + 3.2f * u, cy - 1.0f * u);
                         break;
                 }
             }

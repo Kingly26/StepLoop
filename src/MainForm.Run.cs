@@ -36,7 +36,44 @@ namespace StepLoop
             p.EndColor = ScreenPixel.TryParseHex(tfEndColor.Text, out c) ? ScreenPixel.ToHex(c) : "000000";
             p.EndTolerance = nudEndTol.Value;
             p.EndExtra = ScreenPixel.NormalizeColorList(tfEndExtra.Text);
+            p.RefW = profile.RefW;
+            p.RefH = profile.RefH;
             return p;
+        }
+
+        // ---------- conversione della risoluzione ----------
+
+        void ScaleResolutionDialog()
+        {
+            if (Busy || (runner != null && runner.IsRunning)) return;
+            Profile p = CollectProfile();
+            using (ResolutionDialog dlg = new ResolutionDialog(p, Screen.PrimaryScreen.Bounds.Size))
+            {
+                if (dlg.ShowDialog(this) != DialogResult.OK) return;
+                ApplyResolutionScale(dlg.FromW, dlg.FromH, dlg.ToW, dlg.ToH, dlg.ShiftX, dlg.ShiftY);
+            }
+        }
+
+        // Converte il profilo aperto (clic, aree dei colori e area di fine partita) e ricarica l'interfaccia. Ritorna quanti valori ha convertito.
+        int ApplyResolutionScale(int fromW, int fromH, int toW, int toH, int shiftX, int shiftY)
+        {
+            if (fromW <= 0 || fromH <= 0 || toW <= 0 || toH <= 0) return 0;
+            Profile p = CollectProfile();
+            ResolutionScaler.Result r = ResolutionScaler.Apply(p, (double)toW / fromW, (double)toH / fromH, shiftX, shiftY, false);
+            p.RefW = toW;
+            p.RefH = toH;
+            int sel = list.SelectedIndex;
+            ApplyProfile(p);
+            if (sel >= 0 && sel < ActiveSteps.Count) list.SelectedIndex = sel;
+            LogLine(L.T("Risoluzione convertita da " + fromW + "×" + fromH + " a " + toW + "×" + toH
+                        + (shiftX != 0 || shiftY != 0 ? " (spostamento " + shiftX + ", " + shiftY + ")" : "") + ": "
+                        + r.Points + " posizioni, " + r.Areas + " aree di colore" + (r.EndArea > 0 ? ", area di fine partita" : "")
+                        + ". Controlla i punti con «Testa ora» e salva il profilo.",
+                        "Resolution converted from " + fromW + "×" + fromH + " to " + toW + "×" + toH
+                        + (shiftX != 0 || shiftY != 0 ? " (shift " + shiftX + ", " + shiftY + ")" : "") + ": "
+                        + r.Points + " positions, " + r.Areas + " color areas" + (r.EndArea > 0 ? ", end-of-match area" : "")
+                        + ". Check the points with «Test now» and save the profile."));
+            return r.Total;
         }
 
         void ApplyProfile(Profile p)
@@ -181,6 +218,7 @@ namespace StepLoop
             btnRec.Enabled = !running;
             btnSave.Enabled = !running;
             btnLoad.Enabled = !running;
+            btnResolution.Enabled = !running;
             btnNewProfile.Enabled = !running;
             RegisterPauseHotkey(running);
             if (running)
