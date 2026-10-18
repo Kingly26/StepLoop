@@ -49,6 +49,23 @@ You build a **sequence of steps** by dragging blocks from the palette (or double
   (no real input is sent).
 - **Profiles** are JSON files (`profiles/` folder), saved/loaded from the bottom bar.
 
+## Sample profiles
+
+Ready-made profiles are in the [`profiles/`](profiles) folder: open them with *Load profile…* (or the first time, copy the folder next to
+`StepLoop.exe`). They target **Rainbow Six Siege** (the window title filter is set to "Rainbow Six").
+
+| Profile | What it is |
+| --- | --- |
+| [`Doktors Curse.json`](profiles/Doktors%20Curse.json) | Doktor's Curse event. Checks the menu colors, clicks *Start Button*, checks the start / network error screens (and starts over with **Reset** if one shows up), then repeats keys + click + mouse movement **together** until a color appears. Needs **StepLoop 6.2.0 or newer**. |
+| [`Wasteland Circuit Y11S3.json`](profiles/Wasteland%20Circuit%20Y11S3.json) and [`… low res.json`](profiles/Wasteland%20Circuit%20Y11S3%20low%20res.json) | Wasteland Circuit (Y11S3): the normal one and a *low res* variant (for the game at low resolution, with another reference color and a slightly different ending). |
+| [`profile.json`](profiles/profile.json) | The Wasteland Circuit sequence with a different color for the first check (the same one the *low res* variant uses). |
+| [`P1.json`](profiles/P1.json) | One of the first examples, simpler. |
+
+**Important:** the click points and color areas are **screen coordinates picked on the author's screen** (they reach about X 2600, Y 1940).
+At a different resolution, window mode or UI scale you have to pick them again (*Pick from the screen…* in the inspector, F9) and check with *Test now*.
+Try the profile with **Simulation** first, and use it only where automation is allowed (for example in events or modes that explicitly permit it):
+you are responsible for following the game's rules (see the warning at the top).
+
 ## Build
 
 You only need Windows with **.NET Framework 4.x** (included in Windows 10/11): no external dependencies, no SDK to install.
@@ -142,6 +159,23 @@ Costruisci una **sequenza di passi** trascinando i blocchi dalla palette (o con 
 - **Esecuzione:** pannello live (blocco corrente, controllo colore, variabili, prossimi step), log filtrabile, pausa, *Simulazione*
   (nessun input reale).
 - **Profili** in JSON (cartella `profiles/`), salvataggio/caricamento dalla barra in basso.
+
+## Profili di esempio
+
+I profili pronti sono nella cartella [`profiles/`](profiles): aprili con *Carica profilo…* (o, la prima volta, copia la cartella accanto a
+`StepLoop.exe`). Sono pensati per **Rainbow Six Siege** (il filtro sulla finestra è impostato su "Rainbow Six").
+
+| Profilo | Cos'è |
+| --- | --- |
+| [`Doktors Curse.json`](profiles/Doktors%20Curse.json) | Evento Doktor's Curse. Controlla i colori del menu, clicca *Start Button*, controlla le schermate di errore di avvio / rete (e ricomincia con **Reset** se ne compare una), poi ripete tasti + click + movimento del mouse **insieme** finché compare un colore. Richiede **StepLoop 6.2.0 o successivo**. |
+| [`Wasteland Circuit Y11S3.json`](profiles/Wasteland%20Circuit%20Y11S3.json) e [`… low res.json`](profiles/Wasteland%20Circuit%20Y11S3%20low%20res.json) | Wasteland Circuit (Y11S3): quello normale e una variante *low res* (per il gioco a bassa risoluzione, con un altro colore di riferimento e un finale leggermente diverso). |
+| [`profile.json`](profiles/profile.json) | La sequenza Wasteland Circuit con un colore diverso nel primo controllo (lo stesso usato dalla variante *low res*). |
+| [`P1.json`](profiles/P1.json) | Uno dei primi esempi, più semplice. |
+
+**Importante:** i punti di click e le aree di colore sono **coordinate dello schermo scelte sullo schermo dell'autore** (arrivano a circa X 2600, Y 1940).
+Con un'altra risoluzione, modalità finestra o scala dell'interfaccia vanno scelti di nuovo (*Seleziona dallo schermo…* nell'ispettore, F9) e controllati con *Testa ora*.
+Prova il profilo con **Simulazione** prima, e usalo solo dove l'automazione è consentita (per esempio in eventi o modalità che la permettono esplicitamente):
+sei responsabile del rispetto delle regole del gioco (vedi l'avviso in alto).
 
 ## Compilare
 
