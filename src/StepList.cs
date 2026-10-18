@@ -810,6 +810,10 @@ namespace StepLoop
                 case StepType.StopMacro:
                     d = L.T("ferma tutto", "stops everything");
                     break;
+                case StepType.Reset:
+                    d = L.T("riparte dal primo passo", "starts again from the first step")
+                        + (s.ResetVars ? L.T(" · azzera le variabili", " · clears the variables") : "");
+                    break;
             }
             if (s.RandPause && s.HasPause)
                 d += (d.Length > 0 ? " · " : "") + L.T("pausa ", "pause ") + StepStyle.FmtRange(s.PauseMin, s.PauseMax);

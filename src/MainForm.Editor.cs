@@ -46,7 +46,7 @@ namespace StepLoop
         DarkCombo cbButton, cbCond, cbPreset, cbLabels;
         NumBox nudX, nudY, nudW, nudH, nudTol, nudCount, nudLoopSec, nudDur, nudPause, nudJit, nudWeight, nudPosJit;
         NumBox nudDurMin, nudDurMax, nudDurPct, nudDurLong, nudPauseMin, nudPauseMax, nudPausePct, nudPauseLong;
-        CheckField chkUntil, chkCheckFirst, chkRandDur, chkRandPause, chkRandMove;
+        CheckField chkUntil, chkCheckFirst, chkRandDur, chkRandPause, chkRandMove, chkResetVars;
         SwatchBox swColor;
         AreaPreview areaPreview;
         Chip chipTest;
@@ -409,6 +409,12 @@ namespace StepLoop
                              "OR: it is enough that any one of the conditions is true (e.g. exit if color A or color B appears). AND: all of them must be.");
             segCondJoin.SelectedIndexChanged += delegate { OnEditorChanged(); };
 
+            chkResetVars = new CheckField();
+            Loc(chkResetVars, "Azzera anche le variabili", "Also clear the variables");
+            Tip(chkResetVars, "Quando la sequenza ricomincia, tutte le variabili tornano a 0. Se non lo spunti restano com'erano (utile per contare i tentativi).",
+                              "When the sequence starts over, all variables go back to 0. If unchecked they keep their values (useful to count attempts).");
+            chkResetVars.CheckedChanged += delegate { OnEditorChanged(); };
+
             btnCondRemove = new FlatButton();
             btnCondRemove.Icon = Glyph.Trash;
             btnCondRemove.Style = FlatButton.Look.DangerSoft;
@@ -418,7 +424,7 @@ namespace StepLoop
 
             stack.AddRange(new Control[]
             {
-                fbName, rowLimits, chkUntil, fbCondSel, fbCondJoin, btnCondRemove,
+                fbName, chkResetVars, rowLimits, chkUntil, fbCondSel, fbCondJoin, btnCondRemove,
                 fbCondKind, fbVarName, fbCmp, fbChance, fbVarOp, rowSetVals, fbAltWeight,
                 fbPart, chkPartOn, fbPartChance,
                 fbKeys, fbPool, fbPreset, fbGoto, fbButton, fbCond, rowArea, chkRandMove, fbColor, rowPickBtns, chipTest,
@@ -910,6 +916,7 @@ namespace StepLoop
 
             inspBody.SuspendLayout();
             Vis(fbName, !none && t != StepType.LoopEnd && t != StepType.IfEnd && t != StepType.Else && t != StepType.Option && t != StepType.ChoiceEnd);
+            Vis(chkResetVars, !none && t == StepType.Reset);
             Vis(fbCondSel, hasCond);
             Vis(fbCondJoin, hasCond && editConds.Count >= 2);
             Vis(btnCondRemove, hasCond && cshown > 0);
@@ -1062,6 +1069,9 @@ namespace StepLoop
                 case StepType.ChoiceStart:
                     s.AltWeight = nudAltWeight.Value;
                     break;
+                case StepType.Reset:
+                    s.ResetVars = chkResetVars.Checked;
+                    break;
                 case StepType.Combo:
                     {
                         if (editParts == null) return false;
@@ -1202,6 +1212,7 @@ namespace StepLoop
                 nudPauseLong.Value = s.PauseLongMax;
                 nudPosJit.Value = s.PosJitter;
                 chkRandMove.Checked = s.RandMove;
+                chkResetVars.Checked = s.ResetVars;
 
                 // variabili, probabilità, scelta casuale
                 cbCondKind.SelectedIndex = s.Type == StepType.IfStart ? Math.Min(2, Math.Max(0, s.CondKind)) : 0;

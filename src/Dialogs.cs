@@ -166,7 +166,8 @@ namespace StepLoop
                 + "- Per rendere la macro meno ripetitiva: \"Scegli a caso\" esegue una sola alternativa (con pesi), \"Insieme\" fa partire tasti, click, mouse e mira nello stesso istante "
                 + "con durate casuali, e le variabili con i \"Se\" permettono di contare e decidere (es. fai una cosa ogni 5 giri).\r\n"
                 + "- Ogni condizione (Se, Ripeti fino a, Attendi colore) può avere più controlli: aggiungi un altro colore con «+» e scegli se basta uno (OR) "
-                + "o servono tutti (AND), per esempio per uscire da un ciclo quando compare un colore oppure un altro.",
+                + "o servono tutti (AND), per esempio per uscire da un ciclo quando compare un colore oppure un altro.\r\n"
+                + "- \"Reset\" ricomincia dal primo passo da qualsiasi punto (anche dentro cicli e Se) senza fermare la macro.",
                 "- " + stopKey + " always starts and stops the macro, even inside the game. " + pauseKey + " pauses it without leaving: "
                 + "it releases the keys and presses them again when you resume.\r\n"
                 + "- Color waits work with the game windowed or borderless: in exclusive fullscreen the pixels cannot be read.\r\n"
@@ -175,7 +176,8 @@ namespace StepLoop
                 + "- To make the macro less repetitive: \"Pick random\" runs a single alternative (with weights), \"Together\" starts keys, click, mouse and aim at the same moment "
                 + "with random durations, and variables with \"If\" let you count and decide (e.g. do something every 5 rounds).\r\n"
                 + "- Every condition (If, Repeat until, Wait for color) can have several checks: add another color with «+» and choose whether any one (OR) "
-                + "or all of them (AND) must hold, e.g. to leave a loop when one color or another shows up."));
+                + "or all of them (AND) must hold, e.g. to leave a loop when one color or another shows up.\r\n"
+                + "- \"Reset\" starts again from the first step from anywhere (even inside loops and Ifs) without stopping the macro."));
 
             AddHeading(L.T("Esclusione di responsabilità", "Disclaimer"));
             AddBody(L.T(

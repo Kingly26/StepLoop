@@ -30,12 +30,14 @@ You build a **sequence of steps** by dragging blocks from the palette (or double
 | Family | Blocks |
 | --- | --- |
 | **Input** | Keys · Random key (from a set) · Click · Click at… · Move to… · Mouse (relative movement) · **Together** |
-| **Flow** | Repeat (also "until a color…") · If… / Else · **Pick random** / Option · **Variable** · Goto / Label · Exit · Stop |
+| **Flow** | Repeat (also "until a color…") · If… / Else · **Pick random** / Option · **Variable** · Goto / Label · Exit · **Reset** · Stop |
 | **Wait** | Wait (fixed or random) · Wait for color (appears / disappears) |
 
 - **Randomness everywhere:** durations and pauses with a from–to range and occasional "long" values; *Random* mode with weights.
 - **Pick random:** runs a single alternative drawn at random (with weights); each *Option* can hold several steps.
 - **Variables and If:** set / add / subtract / random number; *If* checks a screen color, a variable or a probability.
+- **Reset:** from anywhere — even deep inside loops and Ifs — it abandons everything and starts again from the first step of the
+  sequence, without stopping the macro. It does not count as a finished repetition, and it can also clear the variables.
 - **Together:** keys, click, mouse and aim start at the same moment, each with its own random duration
   (by default 1–3 s, with a 10% chance of up to 10 s).
 - **Color conditions:** pick from the screen (F9), area preview, *Test now* button.
@@ -119,12 +121,14 @@ Costruisci una **sequenza di passi** trascinando i blocchi dalla palette (o con 
 | Famiglia | Blocchi |
 | --- | --- |
 | **Input** | Tasti · Tasto casuale (da un insieme) · Click · Click su… · Vai a… · Mouse (movimento relativo) · **Insieme** |
-| **Flusso** | Ripeti (anche "finché un colore…") · Se… / Altrimenti · **Scegli a caso** / Opzione · **Variabile** · Goto / Etichetta · Esci · Stop |
+| **Flusso** | Ripeti (anche "finché un colore…") · Se… / Altrimenti · **Scegli a caso** / Opzione · **Variabile** · Goto / Etichetta · Esci · **Reset** · Stop |
 | **Attesa** | Pausa (fissa o casuale) · Attendi colore (compare / sparisce) |
 
 - **Casualità ovunque:** durate e pause con intervallo da–a e valori "lunghi" occasionali; modalità *Random* con pesi.
 - **Scegli a caso:** esegue una sola alternativa estratta a caso (con pesi); ogni *Opzione* può contenere più passi.
 - **Variabili e Se:** imposta/somma/sottrai/numero a caso; il *Se* controlla un colore, una variabile o una probabilità.
+- **Reset:** da qualsiasi punto — anche dentro cicli e Se — abbandona tutto e ricomincia dal primo passo della sequenza,
+  senza fermare la macro. Non conta come una ripetizione completata e può azzerare anche le variabili.
 - **Insieme:** tasti, click, mouse e mira partono nello stesso istante, ciascuno con la propria durata casuale
   (di default 1–3 s, con il 10% delle volte fino a 10 s).
 - **Condizioni sui colori:** selezione dallo schermo (F9), anteprima dell'area, pulsante *Testa ora*.

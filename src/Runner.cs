@@ -69,6 +69,7 @@ namespace StepLoop
         Thread thread;
         bool focusWarned;
         bool breakFlag;
+        bool resetFlag;          // "Reset": si abbandona tutto e si ricomincia dal primo passo della lista
         bool phaseEnded;
         int gotoTarget = -1;
         Func<bool> phaseEndCheck;
@@ -699,7 +700,7 @@ namespace StepLoop
         void DrainGoto(List<MacroStep> steps, int listId, bool random)
         {
             int guard = 0;
-            while (gotoTarget >= 0 && !Stopped && !phaseEnded && guard++ < 100000)
+            while (gotoTarget >= 0 && !Stopped && !phaseEnded && !resetFlag && guard++ < 100000)
             {
                 int t = gotoTarget;
                 gotoTarget = -1;
@@ -724,7 +725,7 @@ namespace StepLoop
                 }
                 else
                 {
-                    for (int i = 0; i < items.Count && !Stopped; i++)
+                    for (int i = 0; i < items.Count && !Stopped && !resetFlag; i++)
                     {
                         int[] it = PickItem(steps, items);
                         RunBlock(steps, 0, it[0], it[1] + 1, true);
@@ -733,6 +734,13 @@ namespace StepLoop
                     }
                 }
                 breakFlag = false;
+                // "Reset": si ricomincia dal primo passo; non conta come una ripetizione completata
+                if (resetFlag)
+                {
+                    resetFlag = false;
+                    if (!Stopped) Sleep(MinLoopGapMs);
+                    continue;
+                }
                 cycles++;
                 lock (statLock) { lastCycleMs = Math.Max(0, Now - cycleStart); }
                 Sleep(MinLoopGapMs);
@@ -763,9 +771,16 @@ namespace StepLoop
                 if (round > 0 || profile.StartWithMenu)
                 {
                     Log(LogKind.Info, L.T("Riavvio partita: eseguo i passi del menu", "Restarting the match: running the menu steps"));
-                    RunBlock(profile.MenuSteps, 1, 0, profile.MenuSteps.Count, false);
-                    gotoTarget = -1;
-                    breakFlag = false;
+                    // un "Reset" nei passi del menu li fa ricominciare dal primo
+                    do
+                    {
+                        resetFlag = false;
+                        RunBlock(profile.MenuSteps, 1, 0, profile.MenuSteps.Count, false);
+                        gotoTarget = -1;
+                        breakFlag = false;
+                        if (resetFlag && !Stopped) { ResetList(1); Sleep(MinLoopGapMs); }
+                    } while (resetFlag && !Stopped);
+                    resetFlag = false;
                     if (Stopped) break;
                 }
                 Log(LogKind.Info, L.T("Partita " + (round + 1) + (profile.Cycles > 0 ? "/" + profile.Cycles : "") + " in corso",
@@ -839,6 +854,14 @@ namespace StepLoop
                     RunBlock(steps, 0, it[0], it[1] + 1, profile.Mode == RunMode.Random);
                     DrainGoto(steps, 0, profile.Mode == RunMode.Random);
                     breakFlag = false;
+                    // "Reset": la sequenza ricomincia dal primo passo (la partita continua)
+                    if (resetFlag)
+                    {
+                        resetFlag = false;
+                        idx = 0;
+                        if (!Stopped) Sleep(MinLoopGapMs);
+                        continue;
+                    }
                     if (profile.Mode == RunMode.Sync && idx == 0)
                         lock (statLock) { lastCycleMs = Math.Max(0, Now - cycleStart); }
                     Sleep(1);
@@ -848,6 +871,7 @@ namespace StepLoop
             {
                 phaseEndCheck = null;
                 phaseEnded = false;
+                resetFlag = false;
                 gotoTarget = -1;
             }
         }
@@ -876,7 +900,7 @@ namespace StepLoop
         void RunBlock(List<MacroStep> steps, int listId, int from, int to, bool random)
         {
             int pc = from;
-            while (!Stopped && !phaseEnded && !breakFlag)
+            while (!Stopped && !phaseEnded && !breakFlag && !resetFlag)
             {
                 // Goto in arrivo: se l'etichetta è in questo tratto si riparte da lì, altrimenti si risale al tratto che la contiene.
                 if (gotoTarget >= 0)
@@ -937,6 +961,7 @@ namespace StepLoop
                                 RunBlock(steps, listId, pc + 1, end, random);
                                 if (gotoTarget >= 0) { reason = "goto"; break; }
                                 if (breakFlag) { breakFlag = false; reason = L.T("esci", "exit"); break; }
+                                if (resetFlag) { reason = "reset"; break; }
                                 if (Stopped || phaseEnded) break;
                                 if (useUntil && ExitConditionMet(listId, pc, s))
                                 {
@@ -1055,6 +1080,15 @@ namespace StepLoop
                         Report(listId, pc);
                         Log(LogKind.Action, Tag(s) + L.T("Esco dal ciclo", "Leaving the loop"));
                         breakFlag = true;
+                        return;
+                    case StepType.Reset:
+                        // abbandona tutto (cicli, Se, scelte) e ricomincia dal primo passo, senza fermare la macro
+                        Report(listId, pc);
+                        SetState(listId, pc, StepRunState.Done);
+                        if (s.ResetVars) { lock (statLock) { vars.Clear(); } }
+                        Log(LogKind.Action, Tag(s) + L.T("Reset: ricomincio dall'inizio", "Reset: starting over from the beginning")
+                            + (s.ResetVars ? L.T(" (variabili azzerate)", " (variables cleared)") : ""));
+                        resetFlag = true;
                         return;
                     case StepType.StopMacro:
                         Report(listId, pc);

@@ -15,7 +15,7 @@ using System.Windows.Forms;
 using System.Xml;
 
 [assembly: System.Reflection.AssemblyTitle("StepLoop")]
-[assembly: System.Reflection.AssemblyVersion("6.1.0.0")]
+[assembly: System.Reflection.AssemblyVersion("6.2.0.0")]
 
 namespace StepLoop
 {
@@ -128,7 +128,7 @@ namespace StepLoop
         Keys = 0, Click = 1, MouseMove = 2, Wait = 3, ClickAt = 4, WaitPixel = 5, WaitPixelGone = 6,
         LoopStart = 7, LoopEnd = 8, IfStart = 9, Else = 10, IfEnd = 11, Break = 12, StopMacro = 13, MoveTo = 14,
         RandomKey = 15, Label = 16, Goto = 17,
-        ChoiceStart = 18, Option = 19, ChoiceEnd = 20, SetVar = 21, Combo = 22
+        ChoiceStart = 18, Option = 19, ChoiceEnd = 20, SetVar = 21, Combo = 22, Reset = 23
     }
 
     public enum RunMode { Sync = 0, Random = 1 }
@@ -335,6 +335,8 @@ namespace StepLoop
         // Condizioni aggiuntive (Se / Ripeti fino a / Attendi colore) e come si combinano con quella principale: 0 = OR, 1 = AND.
         [DataMember(EmitDefaultValue = false)] public CondClause[] Extra;
         [DataMember(EmitDefaultValue = false)] public int CondJoin;
+        // "Reset": azzera anche le variabili quando la sequenza ricomincia.
+        [DataMember(EmitDefaultValue = false)] public bool ResetVars;
 
         // Calcolati da Flow.Prepare, non salvati nel profilo.
         public int Match = -1;
@@ -569,6 +571,14 @@ namespace StepLoop
             return s;
         }
 
+        // "Reset": ricomincia la sequenza dal primo passo (senza fermare la macro); opzionalmente azzera le variabili.
+        public static MacroStep MakeReset(bool clearVars)
+        {
+            MacroStep s = Make(StepType.Reset);
+            s.ResetVars = clearVars;
+            return s;
+        }
+
         // Punto di arrivo di un Goto: il nome dell'etichetta è il Nome del passo.
         public static MacroStep MakeLabel(string name)
         {
@@ -605,6 +615,7 @@ namespace StepLoop
                 case StepType.IfEnd: return L.T("Fine se", "End if");
                 case StepType.Break: return L.T("Esci dal ciclo", "Exit loop");
                 case StepType.StopMacro: return L.T("Ferma la macro", "Stop the macro");
+                case StepType.Reset: return L.T("Reset: ricomincia", "Reset: start over");
                 case StepType.MoveTo: return L.T("Sposta cursore", "Move cursor");
                 case StepType.Label: return L.T("Etichetta", "Label");
                 case StepType.Goto: return "Goto";
@@ -625,7 +636,7 @@ namespace StepLoop
                 {
                     case StepType.LoopStart: case StepType.LoopEnd: case StepType.IfStart: case StepType.Else:
                     case StepType.IfEnd: case StepType.Break: case StepType.StopMacro: case StepType.MoveTo:
-                    case StepType.Label: case StepType.Goto:
+                    case StepType.Label: case StepType.Goto: case StepType.Reset:
                     case StepType.ChoiceStart: case StepType.Option: case StepType.ChoiceEnd: case StepType.SetVar: case StepType.Combo:
                         return false;
                 }
@@ -755,7 +766,7 @@ namespace StepLoop
                 case StepType.Keys: case StepType.RandomKey: return KeysColor;
                 case StepType.Click: case StepType.ClickAt: case StepType.MoveTo: case StepType.MouseMove: return MouseColor;
                 case StepType.Wait: case StepType.WaitPixel: case StepType.WaitPixelGone: return WaitColor;
-                case StepType.LoopStart: case StepType.LoopEnd: return LoopColor;
+                case StepType.LoopStart: case StepType.LoopEnd: case StepType.Reset: return LoopColor;
                 case StepType.IfStart: case StepType.Else: case StepType.IfEnd: return CondColor;
                 default: return ExitColor;
             }
@@ -771,7 +782,7 @@ namespace StepLoop
                 case StepType.Keys: case StepType.RandomKey: case StepType.Click: case StepType.ClickAt:
                 case StepType.MoveTo: case StepType.MouseMove: case StepType.Combo:
                     return Sem.Input;
-                case StepType.LoopStart: case StepType.LoopEnd: case StepType.Label: case StepType.Goto: case StepType.SetVar:
+                case StepType.LoopStart: case StepType.LoopEnd: case StepType.Label: case StepType.Goto: case StepType.SetVar: case StepType.Reset:
                     return Sem.Flow;
                 case StepType.IfStart: case StepType.Else: case StepType.IfEnd:
                 case StepType.ChoiceStart: case StepType.Option: case StepType.ChoiceEnd:
@@ -813,6 +824,7 @@ namespace StepLoop
                 case StepType.Else: return L.T("ALTRIMENTI", "ELSE");
                 case StepType.IfEnd: return L.T("FINE SE", "END IF");
                 case StepType.Break: return L.T("ESCI", "EXIT");
+                case StepType.Reset: return "RESET";
                 case StepType.Label: return L.T("ETICHETTA", "LABEL");
                 case StepType.Goto: return "GOTO";
                 case StepType.ChoiceStart: return L.T("SCEGLI", "PICK");
@@ -865,6 +877,9 @@ namespace StepLoop
                     return L.T("Fine del blocco 'Se'.", "End of the 'If' block.");
                 case StepType.Break:
                     return L.T("Esce subito dal ciclo più interno.", "Leaves the innermost loop right away.");
+                case StepType.Reset:
+                    return L.T("Interrompe tutto e ricomincia dal primo passo della sequenza, da qualsiasi punto (anche dentro cicli e Se). Non ferma la macro.",
+                               "Aborts everything and starts again from the first step of the sequence, from anywhere (even inside loops and Ifs). It does not stop the macro.");
                 case StepType.Label:
                     return L.T("Punto di arrivo con un nome: un Goto può saltare qui da qualunque punto dello stesso blocco o di un blocco interno.",
                                "A named landing point: a Goto can jump here from anywhere in the same block or from a block nested inside it.");
@@ -953,6 +968,7 @@ namespace StepLoop
                 case StepType.Else: return L.T("Altrimenti", "Else");
                 case StepType.IfEnd: return L.T("Fine se", "End if");
                 case StepType.Break: return L.T("Esci dal ciclo", "Exit loop");
+                case StepType.Reset: return L.T("Ricomincia dall'inizio", "Start over from the beginning");
                 case StepType.Label: return L.T("Etichetta", "Label");
                 case StepType.Goto: return L.T("Salta a «", "Jump to «") + s.Input + "»";
                 case StepType.ChoiceStart: return L.T("Scegli a caso", "Pick at random");
@@ -1104,6 +1120,9 @@ namespace StepLoop
                     return L.T("torna al primo passo del ciclo", "goes back to the first step of the loop");
                 case StepType.Break:
                     return L.T("interrompe il ciclo più interno", "ends the innermost loop");
+                case StepType.Reset:
+                    return L.T("riparte dal primo passo", "starts again from the first step")
+                        + (s.ResetVars ? L.T(" e azzera le variabili", " and clears the variables") : "");
                 case StepType.StopMacro:
                     return L.T("ferma tutto", "stops everything");
                 case StepType.Label:

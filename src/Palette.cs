@@ -56,6 +56,7 @@ namespace StepLoop
             Add("Goto…", "Goto…", StepType.Goto, "Salta direttamente a un'etichetta (anche fuori da un ciclo o da un Se).", "Jumps straight to a label (even out of a loop or an If).");
             Add("Etichetta", "Label", StepType.Label, "Punto di arrivo con un nome per i Goto.", "A named landing point for Goto steps.");
             Add("Esci", "Exit", StepType.Break, "Esce subito dal ciclo.", "Leaves the loop right away.");
+            Add("Reset", "Reset", StepType.Reset, "Interrompe tutto e ricomincia dal primo passo della sequenza, da qualsiasi punto (anche dentro cicli e Se). Non ferma la macro.", "Aborts everything and starts again from the first step of the sequence, from anywhere (even inside loops and Ifs). It does not stop the macro.");
             Add("Stop", "Stop", StepType.StopMacro, "Ferma tutta la macro.", "Stops the whole macro.");
             Section("ATTESA", "WAIT");
             Add("Pausa", "Wait", StepType.Wait, "Attesa a tempo (anche casuale).", "Timed wait (optionally random).");
