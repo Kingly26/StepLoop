@@ -1539,7 +1539,7 @@
           "DurMax": 3000,
           "DurMin": 1000,
           "Enabled": true,
-          "Input": "W, A, S, D,",
+          "Input": "W, A, S, D, G",
           "LongMax": 10000,
           "LongPct": 10,
           "MoveX": 0,
